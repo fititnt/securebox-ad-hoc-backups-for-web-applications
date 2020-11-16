@@ -1,7 +1,8 @@
-# securebox-ad-hoc-backups-for-web-applications v2.0
-[draft] Portable Public Domain POSIX shell scripts for human triggered local secure backups with auto-detection features for remote web applications
+# securebox-ad-hoc-backups-for-web-applications v3.0
+**Portable Public Domain POSIX shell scripts for human triggered local secure
+backups with auto-detection features for remote web applications**
 
-In short. the securebox-ad-hoc-backups-for-web-applications v2.0 helps who have
+In short: the securebox-ad-hoc-backups-for-web-applications v2.0 helps who have
 to manage quick local backups for a lot of remote web applications, with the
 bare minimum need of point to an source host (requires you already authorized
 to SSH on server) and the base path of the application. Database options can

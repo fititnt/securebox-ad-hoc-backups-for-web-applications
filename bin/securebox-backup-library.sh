@@ -23,6 +23,20 @@
 #      REVISION:  ---
 #===============================================================================
 
+# TODO: implement SKIP_DOWNLOAD_RSYNC (fititnt, 2020-11-16 01:01 BRT)
+
+# TODO: implement some kind of quick check to see if user is able to ssh to the
+#       remote server. Maybe as part of the initial setup or when first rsync
+#       fails (fititnt, 2020-11-16 01:02 BRT)
+
+# TODO: implement some feature, like explicitly set a relative path to an CMS
+#       type that not only would skip securebox_common_options_project() checks
+#       but already define the strategy to use. Maybe
+#           WEBAPP_JOOMLA_CONFIGURATION="path/to/configuration"
+#           WEBAPP_MOODLE_CONFIG="path/to/config.php"
+#           WEBAPP_WORDPRESS_WPCONFIG="path/to/wp-config.php"
+#       (fititnt, 2020-11-16 01:07 BRT)
+
 # TODO: Implement some helper to allow bit rot protection. See
 #       https://pthree.org/2014/04/01/protect-against-bit-rot-with-parchive/
 #       (fititnt, 2020-11-15 01:59 BRT)
@@ -51,7 +65,7 @@ export DEFAULT__SUBDIR_FILES="files" # /backups/mirror/default/default/files/...
 export DEFAULT__SUBDIR_MYSQLDUMP="mysqldump" # /backups/mirror/default/default/mysqldump/dbname.sql
 # DEFAULT__LOCALMIRROR_THISPROJECT="$DEFAULT__LOCALMIRROR_BASEPATH/$DEFAULT__ORGANIZATION/$DEFAULT__PROJECT"
 
-export DEFAULT__DOWNLOAD_RSYNC_EXCLUDES="--exclude '.well-known'"
+export DEFAULT__DOWNLOAD_RSYNC_EXCLUDES="--exclude='.well-known'"
 export DEFAULT__DOWNLOAD_RSYNC_EXTRAOPTIONS=""
 
 # This path is both for temporary files AND to, if you run this script too fast
@@ -237,23 +251,40 @@ securebox_common_options_securebox_confs() {
     . "$_localvar_defaultconf"
   fi
 
-  if [ -f "$_localvar_cliopt1" ]; then
-    echo "securebox_common_options_securebox_confs:"
-    echo "  $_localvar_cliopt1 exists. Sourcing now"
+  if [ -n "${1}" ]; then
+    echo "yay"
+  else
+    echo "nay"
+  fi
+  echo "[${1}]"
 
-    if [ "$(tr -cd '\r' < "$_localvar_cliopt1" | wc -c)" -gt 0 ]; then
-      echo "The file seems to have CRLF instead of LF as line endings"
-      echo "This may break things very, very bad. Refusing to continue"
-      echo "Please fix with something like"
-      echo "    dos2unix $_localvar_cliopt1"
-      exit 2
-    fi
-    # shellcheck source=/dev/null
-    . "$_localvar_cliopt1"
-  elif [ "$_localvar_cliopt1" != " -h" ] &&
+  # Only check if file first argument is an file if is not an typical help argument
+  if [ "$_localvar_cliopt1" != " -h" ] &&
     [ "$_localvar_cliopt1" != "--help" ] &&
     [ "$_localvar_cliopt1" != "--help-bootstrap" ]; then
-    echo "$_localvar_cliopt1 File does not exit. Aborting."
+  
+    if [ -f "$_localvar_cliopt1" ]; then
+      test "${DEBUG}" = "1" && echo "securebox_common_options_securebox_confs:"
+      echo "  [$_localvar_cliopt1] exists. Sourcing now"
+
+      if [ "$(tr -cd '\r' < "$_localvar_cliopt1" | wc -c)" -gt 0 ]; then
+        test "${DEBUG}" = "1" && echo "securebox_common_options_securebox_confs:"
+        echo "  The file seems to have CRLF instead of LF as line endings"
+        echo "  This may break things very, VERY bad. Refusing to continue"
+        echo "  Please fix with something like"
+        echo "      dos2unix $_localvar_cliopt1"
+        echo "Aborting now."
+        exit 2
+      fi
+    # shellcheck source=/dev/null
+    . "$_localvar_cliopt1"
+    fi
+
+  else
+    echo "securebox_common_options_securebox_confs:"
+    echo "ERROR! [$_localvar_cliopt1] (first cli argument) is not an readable config file"
+    echo "    $PROGRAM_NAME --help"
+    echo "Aborting now."
     exit 2
   fi
 }
