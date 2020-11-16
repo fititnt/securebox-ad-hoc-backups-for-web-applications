@@ -1,0 +1,409 @@
+#!/bin/sh
+#===============================================================================
+#
+#          FILE:  securebox-backup-download
+#
+#         USAGE:  securebox-backup-download [path/to/securebox-backup-options.conf]
+#
+#   DESCRIPTION:  Download files and MariaDB/MySQL dumps from remote hosts to
+#                 a local non-encrypted mirrored copy. Autodetect MariaDB/MySQL
+#                 options from typical Joomla/Moodle/Wordpress/YourCustomApp
+#                 from downloaded files (so in most cases you may only need be
+#                 able to SSH to the remote server).
+#                 Optimized for faster future backups (since uses differential
+#                 rsync algorithm). Ideal for usage with other tools (uses your
+#                 local host as 'securebox'). Please consider use some type of
+#                 block/container encryption (e.g. Unlock before use this tool,
+#                 lock after its use).
+#
+#       OPTIONS:  Several. Please run with the following command to have an idea
+#                   DEBUG=1 securebox-backup-download --help
+#
+#  REQUIREMENTS:  1. rsync
+#                 2. mysqldump (if using the MariaDB/MySQL automatic backup)
+#          BUGS:  ---
+#         NOTES:  ---
+#        AUTHOR:  Emerson Rocha <rocha[at]ieee.org>
+#       COMPANY:  Etica.AI
+#       LICENSE:  Public Domain
+#       VERSION:  v2.0
+#       CREATED:  2020-11-11 07:34 UTC
+#      REVISION:  2020-11-11 08:11 UTC v1.1 renamed to securebox-backup-download.
+#                                      was securebox-backup-files
+#                 2020-11-11 09:53 UTC v1.2 MVP of mirroring (only files).
+#                                      Implemented DRYRUN=1 option
+#                 2020-11-13 07:08 UTC v1.3 Created remote_source_mariadb_dump_and_download
+#                 2020-11-14 04:02 UTC v2.0rc1 started refactoring and cleaning.
+#                                      Preparing to integrate with securebox-backup-archive
+#                 2020-11-14 10:14 UTC v2.0 code refactoring.
+#===============================================================================
+PROGRAM_START_DATETIME=$(date +%s)
+PROGRAM_NAME=$(basename "$0")
+set -e
+
+
+####################### securebox-backup-library.sh v2.0+ ######################
+# Place the securebox-backup-library.sh (non-executable) on the same path this
+# executable is. Common variables and functions (designed to be reusable)
+# are placed there. You are free to create your custom scripts too.
+. securebox-backup-library.sh
+####################### securebox-backup-library.sh v2.0+ ######################
+
+################################  Defaults, START ##############################
+
+#### securebox-backup-library.sh _______________________________________________
+# See securebox-backup-library.sh for common defaults.
+
+#### securebox-backup-download exclusive defaults ______________________________
+# No exclusive defaults yet.
+
+#################################  Defaults, END ###############################
+
+###############################  Functions, START ##############################
+
+#### securebox-backup-library.sh _______________________________________________
+# See securebox-backup-library.sh for common functions.
+
+#### securebox-backup-download exclusive functions _____________________________
+# (Initial Author note) With exception of securebox_backup_download_help and
+# securebox_backup_download_debug all functions are in alphabetical order.
+
+#######################################
+# Show help for securebox-backup-download
+# Globals:
+#   Several (read only)
+# Arguments:
+#   None
+# Returns:
+#   None
+#######################################
+securebox_backup_download_help() {
+  echo "
+$PROGRAM_NAME help
+  Download files and MariaDB/MySQL dumps from remote hosts to a local
+  non-encrypted mirrored copy. Autodetect MariaDB/MySQL options from typical
+  Joomla/Moodle/Wordpress/YourCustomApp from downloaded files (so in most cases
+  you may only need be able to SSH to the remote server)
+  
+  Optimized for faster future backups (since uses differential rsync algorithm).
+  Ideal for usage with other tools (uses your local host as 'securebox').
+  Please consider use some type of block/container encryption (e.g. Unlock
+  before use this tool, lock after its use).
+  
+    Usage:
+      $PROGRAM_NAME [ -h  | --help ]
+        Show this help message and exits
+      $PROGRAM_NAME --help-bootstrap
+        Show potential example on how to boostrap the local filesystem outside
+        this program (this is likely to require root)
+      $PROGRAM_NAME ./path/to/securebox-backup-options.conf (default: ./securebox-backup.conf )
+        Load variables from an file on disk
+
+    Examples:
+
+      Minimal usage (without configuration files):
+        SOURCE_HOST=user@example.org $PROGRAM_NAME
+          Download user@example.org:$SOURCE_PATH to $LOCALMIRROR_THISPROJECT/{$SUBDIR_FILES,$SUBDIR_MYSQLDUMP}
+        SOURCE_HOST=user@example.org SOURCE_PATH=/var/www/wordpress $PROGRAM_NAME
+          Download user@example.org:/var/www/wordpress to $LOCALMIRROR_THISPROJECT/{$SUBDIR_FILES,$SUBDIR_MYSQLDUMP}
+
+      Typical ad-hoc usage (assumes you have configuration file):
+        DEBUG=1 $PROGRAM_NAME ./path/to/custom/securebox-backup.conf 
+          Run with extra information (may output passwords)
+        DRYRUN=1 $PROGRAM_NAME ./path/to/custom/securebox-backup.conf 
+          Test configurations, run rsync --dry-run, but avoid make changes
+
+      Example of securebox-backup.conf
+        # File /backups/mirror/myorg/myproject/securebox-backup.conf
+        SOURCE_HOST=user@example.org
+        SOURCE_PATH=/var/www/moodle
+
+  PROTIP!:
+    Run this help again with debug activated to have an idea of availible
+    enviroment variables to use:
+
+      DEBUG=1 $PROGRAM_NAME --help
+    "
+}
+
+#######################################
+# Helper to show internal variables. Can be called more than once.
+# Globals:
+#   Several (read-only mode)
+# Arguments:
+#   None
+# Returns:
+#   None
+#######################################
+securebox_backup_download_debug()
+{
+  printf "========== securebox_backup_download_debug, start ==========\n"
+
+  ## securebox-backup-library.sh: Common debug options here
+  securebox_common_debug
+
+  ## Any custom option for securebox-backup-download should be placed here
+  # Nothing at the moment
+
+  printf "========== securebox_backup_download_debug, end ==========\n"
+}
+
+#######################################
+# Create directories used by securebox-backup-download. Assumes that the
+# base directory already exists.
+# Globals:
+#   Several (read-only mode)
+# Arguments:
+#   None
+# Returns:
+#   None
+#######################################
+securebox_backup_download_execute_create_local_folders()
+{
+  # Note: this script avoids use mkdir --parents.
+
+  # if [ "${DRYRUN}" -eq "1" ]; then
+  if [ -n "${DRYRUN}" ]; then
+    echo "INFO: DRYRUN [$DRYRUN] defined.. Skiping securebox_backup_download_execute_create_local_folders..."
+    return 0
+  fi
+
+  if [ ! -w "${LOCALMIRROR_BASEPATH}" ]; then
+    echo "ERROR!: LOCALMIRROR_BASEPATH [$LOCALMIRROR_BASEPATH] not writable"
+    echo "Is the current filesystem boostraped? See help with "
+    echo "  $PROGRAM_NAME --help-bootstrap"
+    echo "Aborting!"
+    exit 2
+  fi
+
+  if [ ! -d "${LOCALMIRROR_BASEPATH}/${ORGANIZATION}" ]; then
+    echo "INFO: ${LOCALMIRROR_BASEPATH}/${ORGANIZATION} does not exist. Creating now..."
+    mkdir --mode "${CREATE_LOCAL_FOLDERS_PERMISSIONS}" "${LOCALMIRROR_BASEPATH}/${ORGANIZATION}"
+  fi
+  if [ ! -d "${LOCALMIRROR_BASEPATH}/${ORGANIZATION}/${PROJECT}" ]; then
+    echo "INFO: ${LOCALMIRROR_BASEPATH}/${ORGANIZATION}/${PROJECT} does not exist. Creating now..."
+    mkdir --mode "${CREATE_LOCAL_FOLDERS_PERMISSIONS}" "${LOCALMIRROR_BASEPATH}/${ORGANIZATION}/${PROJECT}"
+  fi
+
+  if [ ! -d "${LOCALMIRROR_THISPROJECT}/${SUBDIR_FILES}" ]; then
+    echo "INFO: ${LOCALMIRROR_THISPROJECT}/${SUBDIR_FILES} does not exist. Creating now..."
+    mkdir --mode "${CREATE_LOCAL_FOLDERS_PERMISSIONS}" "${LOCALMIRROR_THISPROJECT}/${SUBDIR_FILES}"
+  fi
+
+  if [ ! -d "${LOCALMIRROR_THISPROJECT}/${SUBDIR_MYSQLDUMP}" ]; then
+    echo "INFO: ${LOCALMIRROR_THISPROJECT}/${SUBDIR_MYSQLDUMP} does not exist. Creating now..."
+    mkdir --mode "${CREATE_LOCAL_FOLDERS_PERMISSIONS}" "${LOCALMIRROR_THISPROJECT}/${SUBDIR_MYSQLDUMP}"
+  fi
+}
+
+#######################################
+# [Draft] Connect to an remote host, download MariaDB/MySQL databases using
+# mydumper, and download to local filesystem
+# Globals:
+#   Several (read-only mode)
+# Arguments:
+#   None
+# Returns:
+#   None
+#######################################
+securebox_backup_download_execute_database_mydumper() {
+   echo "Not implemented. This is an draft"
+   echo "@see https://github.com/maxbube/mydumper"
+}
+
+#######################################
+# Download an MariaDB/MySQL dump (using mysqldump strategy) from an remote host
+# and rsync to a local directory.
+# The SQL dump files are intentionaly NOT compressed to take advantage of rsync
+# algoritm to make future dumps much faster (ideal for large databases and/or
+# slower internet)
+#
+# Globals:
+#   MYSQLDUMP_TMPANDLOCKDIR  Remote Temp And Lock directory. If exist
+#                            this script will be aborted
+#   SOURCE_MARIADB_SSHHOST
+#   SOURCE_MARIADB_USER
+#   SOURCE_MARIADB_PASS
+#   SOURCE_MARIADB_DBNAME
+#   LOCALMIRROR_MYSQLDUMP_SQLFILE  (this variable is exported, allow be reused)
+# Arguments:
+#   None
+# Returns:
+#   None
+#######################################
+securebox_backup_download_execute_database_mysqldump()
+{
+
+  # export LOCALMIRROR_MYSQLDUMP_SQLFILE="$LOCALMIRROR_THISPROJECT/$SUBDIR_MYSQLDUMP/$SOURCE_MARIADB_DBNAME.sql"
+  LOCALMIRROR_MYSQLDUMP_SQLFILE="$LOCALMIRROR_THISPROJECT/$SUBDIR_MYSQLDUMP/$SOURCE_MARIADB_DBNAME.sql"
+
+  # This folder servers both as temporary file and as locking system
+  # @see http://mywiki.wooledge.org/BashFAQ/050
+  # shellcheck disable=SC2029
+  # if ! ssh "${SOURCE_MARIADB_SSHHOST}" "([ -d '$MYSQLDUMP_TMPANDLOCKDIR' ] || mkdir --mode 0700 '$MYSQLDUMP_TMPANDLOCKDIR')"; then
+  if ! ssh "${SOURCE_MARIADB_SSHHOST}" "(mkdir --mode 0700 '$MYSQLDUMP_TMPANDLOCKDIR')"; then
+    if [ -n "$MYSQLDUMP_EXCLUSIVELOCK" ]; then
+      echo "WARNING!: Unable to [mkdir --mode 0700 '$MYSQLDUMP_TMPANDLOCKDIR'] on ${SOURCE_MARIADB_SSHHOST}"
+      echo "Questions:"
+      echo "  1. Is another mysqldump running? If yes, wait or stop before manually running this again"
+      echo "  2. Is an previous running failed? If yes, manually log on remote server and empty this folder"
+      echo "To skip this check:"
+      echo "  1. Set MYSQLDUMP_EXCLUSIVELOCK='' to skip this check and don't get $MYSQLDUMP_TMPANDLOCKDIR deleted at the end"
+      echo "To delete the folder:"
+      echo "  ssh '${SOURCE_MARIADB_SSHHOST}' 'rm -r $MYSQLDUMP_TMPANDLOCKDIR'"
+      echo "Aborting now."
+      exit 1
+    else
+      echo "INFO: MYSQLDUMP_EXCLUSIVELOCK [$MYSQLDUMP_EXCLUSIVELOCK] is defined"
+      echo "    No checks will be made on $MYSQLDUMP_TMPANDLOCKDIR existence"
+    fi
+  fi
+
+  # If debug is enabled, we print the ssh and rsync commands
+  test "${DEBUG}" = "1" && set -x
+
+  # Note: password as parameter is not really safe on shared hosting.
+  # One alternative could me use .my.cnf file with data
+  # shellcheck disable=SC2029
+  ssh "${SOURCE_MARIADB_SSHHOST}" "mysqldump --single-transaction --quick --user='$SOURCE_MARIADB_USER' --password='$SOURCE_MARIADB_PASS' '$SOURCE_MARIADB_DBNAME' > $MYSQLDUMP_TMPANDLOCKDIR/$SOURCE_MARIADB_DBNAME.sql"
+
+  rsync --verbose --compress "${SOURCE_MARIADB_SSHHOST}:$MYSQLDUMP_TMPANDLOCKDIR/$SOURCE_MARIADB_DBNAME.sql" "$LOCALMIRROR_MYSQLDUMP_SQLFILE"
+  set +x
+
+  if [ -n "$MYSQLDUMP_EXCLUSIVELOCK" ]; then
+    echo "MYSQLDUMP_EXCLUSIVELOCK [$MYSQLDUMP_EXCLUSIVELOCK] defined. removing $MYSQLDUMP_TMPANDLOCKDIR on $SOURCE_MARIADB_SSHHOST"
+    # shellcheck disable=SC2029
+    ssh "${SOURCE_MARIADB_SSHHOST}" "rm -r $MYSQLDUMP_TMPANDLOCKDIR"
+  fi
+}
+
+#######################################
+# Executes the download of remote files to a local mirror, with rsync
+# Globals:
+#   Several (read-only mode)
+#   LOCALMIRROR_FILES_PATH  This variable is exported. Useful for reuse on other
+#                           Scripts, like the securebox-backup-archive
+# Arguments:
+#   None
+# Returns:
+#   None
+#######################################
+securebox_backup_download_execute_files_rsync()
+{
+  #export LOCALMIRROR_FILES_PATH="${LOCALMIRROR_THISPROJECT}/${SUBDIR_FILES}"
+  LOCALMIRROR_FILES_PATH="${LOCALMIRROR_THISPROJECT}/${SUBDIR_FILES}"
+
+  # NOTE on the 'shellcheck disable=SC2086':
+  #  Both $DOWNLOAD_RSYNC_EXCLUDES and $RSYNC_EXTRAOPTIONS need to be
+  #  unquoted because POSIX shell is complitated to use arrays, and in
+  #  this case the user really need to often use multiple arguments.
+  #  The decision to move these less save unquoted options to the end
+  #  of the rsync command is to mitigate user (if for example set
+  #  an local path, like / or /home/myuser), don't destroy own data.
+
+  set -x
+  # shellcheck disable=SC2086
+  rsync \
+    --times \
+    --itemize-changes \
+    --recursive \
+    --compress \
+    --delete \
+    "${SOURCE_HOST}:${SOURCE_PATH}" \
+    "${LOCALMIRROR_FILES_PATH}" \
+    ${DOWNLOAD_RSYNC_DRYRUN_STRING} \
+    ${DOWNLOAD_RSYNC_EXCLUDES} \
+    ${RSYNC_EXTRAOPTIONS}
+  set +x
+}
+
+#######################################
+# Show results of and successful running, with some quick important information
+# Globals:
+#   Several (read-only mode)
+# Arguments:
+#   None
+# Returns:
+#   None
+#######################################
+securebox_backup_download_results() {
+  echo ""
+  echo "$PROGRAM_NAME finished."
+  echo "Your mirrored data is at $LOCALMIRROR_THISPROJECT"
+  echo ""
+}
+
+#######################################
+# Based on DEFAUL__* vars and what is discovered by
+# securebox_common_options_securebox_confs the
+# securebox_common_options_setdefaults will use the equivalent DEFAUL__* if the
+# user did not customized. This funcion still not know about options detected
+# From projects on disk, as defined on securebox_common_options_project
+#
+# Globals:
+#   Several
+#   DOWNLOAD_RSYNC_DRYRUN_STRING  (depends on DRYRUN)
+# Arguments:
+#   None
+# Returns:
+#   None
+#######################################
+securebox_backup_download_setdefaults()
+{
+  # securebox-backup-library.sh: Load common defaults for all securebox tools
+  securebox_common_options_setdefaults
+
+  # Any custom option for securebox-backup-download should be placed here
+}
+
+################################  Functions, END ###############################
+###############################  Main logic, START #############################
+
+# if ./securebox-backup.conf exist
+# If running this script with securebox-backup-download path/to/securebox-backup-options.conf
+securebox_common_options_securebox_confs "$1"
+
+# Define the defaults based on what we know so far (still not parsed the Webapps)
+securebox_backup_download_setdefaults
+
+# Debug mode? Print variables
+test "${DEBUG}" = "1" && securebox_backup_download_debug
+
+if [ "$1" = "--help-bootstrap" ]; then
+  securebox_common_help_boostrap_local
+  exit 0
+fi
+
+# $SOURCE_HOST not explicitly defined or -h | --help. Show help
+if [ -z "$SOURCE_HOST" ] || [ "$SOURCE_HOST" = "user@example.com" ] ||
+  [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
+  securebox_backup_download_help
+  exit 2
+fi
+
+securebox_common_dont_run_as_root_please
+
+securebox_backup_download_execute_create_local_folders
+
+securebox_backup_download_execute_files_rsync
+
+if [ -z "$SKIP_WEBAPP_TYPE_AUTODETECTION" ]; then
+  securebox_common_options_project
+fi
+
+if [ -z "$SKIP_MYSQLDUMP" ] && [ -n "$SOURCE_MARIADB_DBNAME" ]; then
+  securebox_backup_download_execute_database_mysqldump
+fi
+
+# Debug mode? Print variables
+test "${DEBUG}" = "1" && securebox_backup_download_debug
+
+securebox_backup_download_results
+
+################################  Main logic, END ##############################
+
+PROGRAM_END_DATETIME=$(date +%s)
+PROGRAM_TIME=$((PROGRAM_END_DATETIME-PROGRAM_START_DATETIME))
+
+echo "$PROGRAM_NAME Runtime: $PROGRAM_TIME"
+exit 0

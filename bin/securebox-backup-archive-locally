@@ -1,0 +1,275 @@
+#!/bin/sh
+#===============================================================================
+#
+#          FILE:  securebox-backup-archive-locally
+#
+#         USAGE:  securebox-backup-archive-locally [options.conf]
+#
+#   DESCRIPTION:  securebox-backup-archive-locally IS AN DRAFT. Not tested
+#                 Read more at securebox-backups/backup-download-files.sh
+#
+#       OPTIONS:  ---
+#
+#  REQUIREMENTS:  ---
+#          BUGS:  ---
+#         NOTES:  ---
+#        AUTHOR:  Emerson Rocha <rocha[at]ieee.org>
+#       COMPANY:  Etica.AI
+#       LICENSE:  Public Domain
+#       VERSION:  1.0 (draft)
+#       CREATED:  2020-11-14 03:01 UTC Created. Based on securebox-backup-download v1.3
+#      REVISION:  ---
+#===============================================================================
+set -e
+
+# @see MVP of encrypted backups resilient to bit rot (Data degradation / Data corruption) https://github.com/fititnt/AdHocSecurebox/issues/36
+# @see https://superuser.com/questions/1490438/are-zip-files-vulnerable-to-corruption
+#        - Non-solid compression make easier to recover
+# @see https://ukiahsmith.com/blog/which-compression-format-to-use-for-archiving/
+#        - https://www.7-zip.org/recover.html (hardcore)
+# @see https://www.youtube.com/watch?v=zFRqBfy-2eQ
+#        - https://www.urbanophile.com/arenn/hacking/gzrt/gzrt.html
+#        - https://github.com/arenn/gzrt
+
+PROGRAM_START_DATETIME=$(date +%s)
+PROGRAM_NAME=$(basename "$0")
+
+####################### securebox-backup-library.sh v2.0+ ######################
+# Place the securebox-backup-library.sh (non-executable) on the same path this
+# executable is. Common variables and functions (designed to be reusable)
+# are placed there. You are free to create your custom scripts too.
+. securebox-backup-library.sh
+####################### securebox-backup-library.sh v2.0+ ######################
+
+################################  Defaults, START ##############################
+
+#### securebox-backup-library.sh _______________________________________________
+# See securebox-backup-library.sh for common defaults.
+
+#### securebox-backup-archive-locally exclusive defaults _______________________
+DEFAULT__TIMESTAMP=$(date +'%FT%T')
+
+#################################  Defaults, END ###############################
+###############################  Functions, START ##############################
+
+#### securebox-backup-library.sh _______________________________________________
+# See securebox-backup-library.sh for common functions.
+
+#### securebox-backup-download exclusive functions _____________________________
+# (Initial Author note) With exception of securebox_backup_archive_locally_help
+# and securebox_backup_archive_locally_debug all functions are in alphabetical
+# order.
+
+#######################################
+# Show help for securebox-backup-archive-locally
+# Globals:
+#   Several (read only)
+# Arguments:
+#   None
+# Returns:
+#   None
+#######################################
+securebox_backup_archive_locally_help() {
+  echo "
+$PROGRAM_NAME help
+  (TODO: add dedicated help for securebox-backup-archive-locally)
+  
+    Usage:
+      $PROGRAM_NAME [ -h  | --help ]
+        Show this help message and exits
+      $PROGRAM_NAME ./path/to/securebox-backup-options.conf (default: ./securebox-backup.conf )
+        Load variables from an file on disk
+
+    Examples:
+
+      Minimal usage (without configuration files):
+        SOURCE_HOST=user@example.org $PROGRAM_NAME
+          Download user@example.org:$SOURCE_PATH to $LOCALARCHIVES_THISPROJECT/{$SUBDIR_FILES,$SUBDIR_MYSQLDUMP}
+        SOURCE_HOST=user@example.org SOURCE_PATH=/var/www/wordpress $PROGRAM_NAME
+          Download user@example.org:/var/www/wordpress to $LOCALARCHIVES_THISPROJECT/{$SUBDIR_FILES,$SUBDIR_MYSQLDUMP}
+
+      Typical ad-hoc usage (assumes you have configuration file):
+        DEBUG=1 $PROGRAM_NAME ./path/to/custom/securebox-backup.conf 
+          Run with extra information (may output passwords)
+        DRYRUN=1 $PROGRAM_NAME ./path/to/custom/securebox-backup.conf 
+          Test configurations, run rsync --dry-run, but avoid make changes
+
+      Example of securebox-backup.conf
+        # File /backups/mirror/myorg/myproject/securebox-backup.conf
+        SOURCE_HOST=user@example.org
+        SOURCE_PATH=/var/www/moodle
+
+  PROTIP!:
+    Run this help again with debug activated to have an idea of availible
+    enviroment variables to use:
+
+      DEBUG=1 $PROGRAM_NAME --help
+    "
+}
+
+#######################################
+# Helper to show internal variables. Can be called more than once.
+# Globals:
+#   Several (read-only mode)
+# Arguments:
+#   None
+# Returns:
+#   None
+#######################################
+securebox_backup_archive_locally_debug()
+{
+  printf "========== securebox_backup_archive_locally_debug, start ==========\n"
+
+  ## securebox-backup-library.sh: Common debug options here
+  securebox_common_debug
+
+  ## Any custom option for securebox-backup-download should be placed here
+  TIMESTAMP="${TIMESTAMP:-$DEFAULT__TIMESTAMP}"
+
+  printf "========== securebox_backup_archive_locally_debug, end ==========\n"
+}
+
+#######################################
+# Create directories used by securebox-backup-download. Assumes that the
+# base directory already exists.
+# Globals:
+#   Several (read-only mode)
+# Arguments:
+#   None
+# Returns:
+#   None
+#######################################
+securebox_backup_archive_locally_create_local_folders()
+{
+  # Note: this script avoids use mkdir --parents.
+
+  # if [ "${DRYRUN}" -eq "1" ]; then
+  if [ -n "${DRYRUN}" ]; then
+    echo "INFO: DRYRUN [$DRYRUN] defined.. Skiping securebox_backup_download_execute_create_local_folders..."
+    return 0
+  fi
+
+  if [ ! -w "${LOCALARCHIVES_BASEPATH}" ]; then
+    echo "ERROR!: LOCALARCHIVES_BASEPATH [$LOCALARCHIVES_BASEPATH] not writable"
+    echo "Is the current filesystem boostraped? See help with "
+    echo "  $PROGRAM_NAME --help-bootstrap"
+    echo "Aborting!"
+    exit 2
+  fi
+
+  if [ ! -d "${LOCALARCHIVES_BASEPATH}/${ORGANIZATION}" ]; then
+    echo "INFO: ${LOCALARCHIVES_BASEPATH}/${ORGANIZATION} does not exist. Creating now..."
+    mkdir --mode "${CREATE_LOCAL_FOLDERS_PERMISSIONS}" "${LOCALARCHIVES_BASEPATH}/${ORGANIZATION}"
+  fi
+  if [ ! -d "${LOCALARCHIVES_BASEPATH}/${ORGANIZATION}/${PROJECT}" ]; then
+    echo "INFO: ${LOCALARCHIVES_BASEPATH}/${ORGANIZATION}/${PROJECT} does not exist. Creating now..."
+    mkdir --mode "${CREATE_LOCAL_FOLDERS_PERMISSIONS}" "${LOCALARCHIVES_BASEPATH}/${ORGANIZATION}/${PROJECT}"
+  fi
+
+  if [ ! -d "${LOCALARCHIVES_THISPROJECT}/${SUBDIR_FILES}" ]; then
+    echo "INFO: ${LOCALARCHIVES_THISPROJECT}/${SUBDIR_FILES} does not exist. Creating now..."
+    mkdir --mode "${CREATE_LOCAL_FOLDERS_PERMISSIONS}" "${LOCALARCHIVES_THISPROJECT}/${SUBDIR_FILES}"
+  fi
+
+  if [ ! -d "${LOCALARCHIVES_THISPROJECT}/${SUBDIR_MYSQLDUMP}" ]; then
+    echo "INFO: ${LOCALARCHIVES_THISPROJECT}/${SUBDIR_MYSQLDUMP} does not exist. Creating now..."
+    mkdir --mode "${CREATE_LOCAL_FOLDERS_PERMISSIONS}" "${LOCALARCHIVES_THISPROJECT}/${SUBDIR_MYSQLDUMP}"
+  fi
+}
+
+#######################################
+# Create directories used by securebox-backup-download. Assumes that the
+# base directory already exists.
+# Globals:
+#   Several (read-only mode)
+# Arguments:
+#   None
+# Returns:
+#   None
+#######################################
+securebox_backup_archive_locally_execute_xpto()
+{
+  echo "TODO securebox_backup_archive_locally"
+}
+
+#######################################
+# Show results of and successful running, with some quick important information
+# Globals:
+#   Several (read-only mode)
+# Arguments:
+#   None
+# Returns:
+#   None
+#######################################
+securebox_backup_archive_locally_results() {
+  echo ""
+  echo "$PROGRAM_NAME finished."
+  echo "Your archived data is at $LOCALARCHIVES_THISPROJECT"
+  echo ""
+}
+
+#######################################
+# Based on DEFAUL__* vars and what is discovered by
+# securebox_common_options_securebox_confs the
+# securebox_common_options_setdefaults will use the equivalent DEFAUL__* if the
+# user did not customized. This funcion still not know about options detected
+# From projects on disk, as defined on securebox_common_options_project
+#
+# Globals:
+#   Several
+#   DOWNLOAD_RSYNC_DRYRUN_STRING  (depends on DRYRUN)
+# Arguments:
+#   None
+# Returns:
+#   None
+#######################################
+securebox_backup_archive_locally_setdefaults()
+{
+  # securebox-backup-library.sh: Load common defaults for all securebox tools
+  securebox_common_options_setdefaults
+
+  # Any custom option for securebox-backup-download should be placed here
+}
+
+
+################################  Functions, END ###############################
+###############################  Main logic, START #############################
+
+echo "securebox-backup-archive-locally TODO:..."
+
+# if ./securebox-backup.conf exist
+# If running this script with securebox-backup-download path/to/securebox-backup-options.conf
+securebox_common_options_securebox_confs "$1"
+
+# Define the defaults based on what we know so far (still not parsed the Webapps)
+securebox_backup_archive_locally_setdefaults
+
+# Debug mode? Print variables
+test "${DEBUG}" = "1" && securebox_backup_archive_locally_debug
+
+if [ "$1" = "--help-bootstrap" ]; then
+  securebox_common_help_boostrap_local
+  exit 0
+fi
+
+# $SOURCE_HOST not explicitly defined or -h | --help. Show help
+if [ -z "$SOURCE_HOST" ] || [ "$SOURCE_HOST" = "user@example.com" ] ||
+  [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
+  securebox_backup_archive_locally_help
+  # securebox_backup_archive_debug
+  exit 2
+fi
+
+securebox_common_dont_run_as_root_please
+
+securebox_backup_archive_locally_create_local_folders
+
+securebox_backup_archive_locally_results
+
+################################  Main logic, END ##############################
+
+PROGRAM_END_DATETIME=$(date +%s)
+PROGRAM_TIME=$((PROGRAM_END_DATETIME-PROGRAM_START_DATETIME))
+
+echo "$PROGRAM_NAME Runtime: $PROGRAM_TIME"
+exit 0
