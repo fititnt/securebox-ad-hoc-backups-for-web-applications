@@ -385,7 +385,9 @@ securebox_common_dont_run_as_root_please
 
 securebox_backup_download_execute_create_local_folders
 
-securebox_backup_download_execute_files_rsync
+if [ -z "$SKIP_DOWNLOAD_RSYNC" ]; then
+  securebox_backup_download_execute_files_rsync
+fi
 
 if [ -z "$SKIP_WEBAPP_TYPE_AUTODETECTION" ]; then
   securebox_common_options_project

@@ -1,4 +1,4 @@
-# securebox-ad-hoc-backups-for-web-applications v3.0
+# securebox-ad-hoc-backups-for-web-applications v3.0 (draft)
 **Portable Public Domain POSIX shell scripts for human triggered local secure
 backups with auto-detection features for remote web applications**
 
@@ -8,6 +8,40 @@ bare minimum need of point to an source host (requires you already authorized
 to SSH on server) and the base path of the application. Database options can
 be inferred from common CMS configurations, so you don't need to specify extra
 credentials.
+
+---
+
+**Table of Contents**
+
+<!-- TOC depthFrom:2 -->
+
+- [Supported web applications](#supported-web-applications)
+    - [Joomla](#joomla)
+    - [Moodle](#moodle)
+- [Already implemented features](#already-implemented-features)
+- [Changelog (the first public version)](#changelog-the-first-public-version)
+- [FAQ](#faq)
+    - [1. Timeouts on MariaDB/MySQL large database dumps](#1-timeouts-on-mariadbmysql-large-database-dumps)
+    - [2. '/tmp/databasedump.lock' lock issues / Why do I have to delete manually?](#2-tmpdatabasedumplock-lock-issues--why-do-i-have-to-delete-manually)
+- [License](#license)
+
+<!-- /TOC -->
+
+---
+
+## Supported web applications
+
+Note: as v3.0 (draft) only files and MariaDB/MySQL databases are implemented on
+web applications auto detected. Other databases (like PostgreSQL) as long as
+you how to translate an `mysqldump` command to another tool, can be _easily_
+added.
+
+### Joomla
+> Since v1.0
+
+### Moodle
+> Since 3.0 (draft)
+
 
 ## Already implemented features
 
@@ -47,6 +81,31 @@ Work is based on previous (not yet released work):
 > - securebox-backup-download v2.0
 > - securebox-backup-library.sh v2.0
 > - securebox-backup-archive-locally v1.0 (draft)
+
+## FAQ
+### 1. Timeouts on MariaDB/MySQL large database dumps
+> Quick fix: while running this tool, also open an additional SSH connection to
+your server. This keeps the connection alive without extra changes on your
+current workstation.
+
+When doing non-interactive _mysqldump strategy_ on a remote server is likely that for very large databases
+large databases this program may timeout. The [_DB.SE Will a mysql db import
+be interrupted if my ssh session times out?_](https://dba.stackexchange.com/questions/140565/will-a-mysql-db-import-be-interrupted-if-my-ssh-session-times-out) or the
+[How to Increase SSH Connection Timeout in Linux](https://www.tecmint.com/increase-ssh-connection-timeout/)
+may explain better this issue, but the proposed quick fix is likely to be an
+win-win
+
+_TODO: maybe we warn the user when we detect the error? This would reduce need
+to document this workaround (fititnt, 2020-11-16 05:16 UTC)_
+
+### 2. '/tmp/databasedump.lock' lock issues / Why do I have to delete manually?
+> `MYSQLDUMP_EXCLUSIVELOCK=` (empty) change this **intentional** behavior
+
+The `/tmp/databasedump.lock` (`MYSQLDUMP_TMPANDLOCKDIR`) is both an temporary
+dir and a lock mecanism (it means you don't overload your server with multiple
+runs). It's intentional require the user to manually delete instead of do it.
+
+This issue is likely to happens if you last atempt timeout'ed (see FAQ 1).
 
 ## License
 Public Domain

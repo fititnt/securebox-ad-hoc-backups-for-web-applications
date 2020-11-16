@@ -18,12 +18,16 @@
 #        AUTHOR:  Emerson Rocha <rocha[at]ieee.org>
 #       COMPANY:  Etica.AI
 #       LICENSE:  Public Domain
-#       VERSION:  v2.0
+#       VERSION:  v2.1
 #       CREATED:  2020-11-14 23:52 UTC Created. Based on securebox-backup-download v2.0
-#      REVISION:  ---
+#      REVISION:  2020-11-16 05:06 UTC Autodetect Moodle LMS configurations
 #===============================================================================
 
-# TODO: implement SKIP_DOWNLOAD_RSYNC (fititnt, 2020-11-16 01:01 BRT)
+# TODO: document some tricks to workaround timeout issues when dumping large
+#       databases. https://www.tecmint.com/increase-ssh-connection-timeout/
+#       Maybe instruct person to open a second ssh connection while using this
+#       tool could be a quick ad hoc workaround?
+#       (fititnt, 2020-11-16 02:04 BRT)
 
 # TODO: implement some kind of quick check to see if user is able to ssh to the
 #       remote server. Maybe as part of the initial setup or when first rsync
@@ -77,6 +81,8 @@ export DEFAULT__MYSQLDUMP_EXCLUSIVELOCK="1"
 # You can define DEFAULT__SKIP_CREATE_LOCAL_FOLDERS=1 to create yourself
 export DEFAULT__SKIP_CREATE_LOCAL_FOLDERS=
 export DEFAULT__CREATE_LOCAL_FOLDERS_PERMISSIONS="0711"
+
+export DEFAULT__SKIP_DOWNLOAD_RSYNC
 
 # Even if you don't define MariaDB/MySQL credentials, this script will try to
 #  guess if you are using Joomla/Wordpress/Moodle and download the database
@@ -251,13 +257,6 @@ securebox_common_options_securebox_confs() {
     . "$_localvar_defaultconf"
   fi
 
-  if [ -n "${1}" ]; then
-    echo "yay"
-  else
-    echo "nay"
-  fi
-  echo "[${1}]"
-
   # Only check if file first argument is an file if is not an typical help argument
   if [ "$_localvar_cliopt1" != " -h" ] &&
     [ "$_localvar_cliopt1" != "--help" ] &&
@@ -301,23 +300,23 @@ securebox_common_options_securebox_confs() {
 #######################################
 securebox_common_options_project ()
 {
-  # echo "securebox_options_inferece_from_project"
-
   # POSIX does support local keywork.
   _local_root="$LOCALMIRROR_THISPROJECT/$SUBDIR_FILES"
 
   if [ -f "${_local_root}/configuration.php" ]; then
-    echo "securebox_options_inferece_from_project: trying Joomla..."
+    echo "securebox_options_inferece_from_project: trying Joomla [${_local_root}/configuration.php]..."
     securebox_common_options_project_joomla "${_local_root}/configuration.php"
   elif [ -f "${_local_root}/wp-config.php" ]; then
-    echo "securebox_options_inferece_from_project: trying Wordpress..."
-    securebox_common_options_project_wordpress "${_local_root}/configuration.php"
+    echo "securebox_options_inferece_from_project: trying Wordpress [${_local_root}/wp-config.php]..."
+    securebox_common_options_project_wordpress "${_local_root}/wp-config.php"
   elif [ -f "${_local_root}/config.php" ]; then
-    echo "securebox_options_inferece_from_project: trying Moodle [/config.php]..."
+    echo "securebox_options_inferece_from_project: trying Moodle [${_local_root}/config.php]..."
     securebox_common_options_project_moodle "${_local_root}/config.php"
-  elif [ -f "${_local_root}/configuration.php" ]; then
-    echo "securebox_options_inferece_from_project: trying Moodle [/moodle/config.php]..."
+  elif [ -f "${_local_root}/moodle/config.php" ]; then
+    echo "securebox_options_inferece_from_project: trying Moodle [${_local_root}/moodle/config.php]..."
     securebox_common_options_project_moodle "${_local_root}/moodle/config.php"
+  else
+    echo "securebox_options_inferece_from_project: Web Application type not automatically detected" 
   fi
 }
 
@@ -363,7 +362,24 @@ securebox_common_options_project_joomla ()
 #######################################
 securebox_common_options_project_moodle ()
 {
-  echo "Not implemented yet. You can use securebox_options_inferece_from_joomla reference"
+  # echo 'oioi'
+  # # securebox_backup_download_help
+  # awk -F"'" '/dbhost/{print $2}' "$1"
+  # awk -F"'" '/dbname/{print $2}' "$1"
+  # awk -F"'" '/dbuser/{print $2}' "$1"
+  # awk -F"'" '/dbpass/{print $2}' "$1"
+
+  # grep -oP "\\db\s.+?'\K[^']+" "$1"
+  # echo 'oioi 2'
+  SOURCE_MARIADB_DBNAME=$(awk -F"'" '/dbname/{print $2}' "$1")
+  SOURCE_MARIADB_HOST=$(awk -F"'" '/dbhost/{print $2}' "$1")
+  SOURCE_MARIADB_USER=$(awk -F"'" '/dbuser/{print $2}' "$1")
+  SOURCE_MARIADB_PASS=$(awk -F"'" '/dbpass/{print $2}' "$1")
+
+  export SOURCE_MARIADB_DBNAME
+  export SOURCE_MARIADB_HOST
+  export SOURCE_MARIADB_USER
+  export SOURCE_MARIADB_PASS
 }
 
 #######################################
@@ -429,6 +445,7 @@ securebox_common_options_setdefaults()
   export MYSQLDUMP_EXCLUSIVELOCK="${MYSQLDUMP_EXCLUSIVELOCK:-$DEFAULT__MYSQLDUMP_EXCLUSIVELOCK}"
 
   # Other
+  export SKIP_DOWNLOAD_RSYNC="${SKIP_DOWNLOAD_RSYNC:-$DEFAULT__SKIP_DOWNLOAD_RSYNC}"
   export SKIP_CREATE_LOCAL_FOLDERS="${SKIP_CREATE_LOCAL_FOLDERS:-$DEFAULT__SKIP_CREATE_LOCAL_FOLDERS}"
   export CREATE_LOCAL_FOLDERS_PERMISSIONS="${CREATE_LOCAL_FOLDERS_PERMISSIONS:-$DEFAULT__CREATE_LOCAL_FOLDERS_PERMISSIONS}"
   export SKIP_MYSQLDUMP="${SKIP_MYSQLDUMP:-$DEFAULT__SKIP_MYSQLDUMP}"
