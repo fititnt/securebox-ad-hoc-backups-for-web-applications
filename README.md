@@ -1,13 +1,59 @@
-# securebox-ad-hoc-backups-for-web-applications v3.0 (draft)
-**Portable Public Domain POSIX shell scripts for human triggered local secure
-backups with auto-detection features for remote web applications**
+# securebox-ad-hoc-backups-for-web-applications v3.0
+**Human aided remote web application backup to your local workstation.
+Auto discovery features (like databases to mysqldump) from common web apps
+configuration files so you may not need much more than specify an SSH host and
+an the path of applicatin. Written in very portable POSIX shell script.
+Dedicated to Public Domain.**
 
+
+**s for human triggered local secure
+backups with auto-detection features for remote web applications.**
+
+**Quick usage**
+```bash
+# If you can ssh user@example.org, you can do this:
+
+SOURCE_HOST="user@example.org" securebox-backup-download
+# user@example.org:/var/www files are rsync'ed to /backups/mirror/default/default/files
+```
+
+```bash
+# If the path is an auto detected app, even without specify database options
+# it WILL get an database dump for you (requires mysqldump on the remote host)
+
+SOURCE_HOST="joomlauser@example.org" SOURCE_PATH="/var/www/joomla/" securebox-backup-download
+# example.org:/var/www/joomla are rsync'ed  to /backups/mirror/default/default/files
+# Database mentioned on /var/www/joomla/configuration.php will be at /backups/mirror/default/default/mysqldump/default.dbname.sql
+```
+
+**With configuration files**
+```bash
+
+# securebox-backup-download load an securebox-backup.conf on directory you run
+# this command. But accept as parameter an file.
+
+tee my-securebox-backup.conf <<EOF
+SOURCE_HOST="moodleuser@example.com"
+SOURCE_PATH="/var/www/moodle/"
+ORGANIZATION="university-acme"
+PROJECT="department-of-physics-prod"
+EOF
+
+securebox-backup-download ./my-securebox-backup.conf
+# Files at /backups/mirror/university-acme/department-of-physics-prod/files
+# MariaDB/MySQL at /backups/mirror/university-acme/department-of-physics-prod/mysqldump/dbname.sql
+
+```
+
+<!--
 In short: the securebox-ad-hoc-backups-for-web-applications v2.0 helps who have
 to manage quick local backups for a lot of remote web applications, with the
 bare minimum need of point to an source host (requires you already authorized
 to SSH on server) and the base path of the application. Database options can
 be inferred from common CMS configurations, so you don't need to specify extra
 credentials.
+
+-->
 
 ---
 

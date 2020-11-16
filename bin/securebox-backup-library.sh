@@ -257,6 +257,8 @@ securebox_common_options_securebox_confs() {
     . "$_localvar_defaultconf"
   fi
 
+  # Bug: securebox-backup-download --help still fail (fititnt, 2020-11-16 06:13 UTC)
+
   # Only check if file first argument is an file if is not an typical help argument
   if [ "$_localvar_cliopt1" != " -h" ] &&
     [ "$_localvar_cliopt1" != "--help" ] &&
