@@ -305,13 +305,33 @@ securebox_common_options_project ()
   # POSIX does support local keywork.
   _local_root="$LOCALMIRROR_THISPROJECT/$SUBDIR_FILES"
 
+
+  # Joomla?
   if [ -f "${_local_root}/configuration.php" ]; then
     echo "securebox_options_inferece_from_project: trying Joomla [${_local_root}/configuration.php]..."
     securebox_common_options_project_joomla "${_local_root}/configuration.php"
-  elif [ -f "${_local_root}/wp-config.php" ]; then
+    return
+  fi
+
+  # Wordpress?
+  if [ -f "${_local_root}/wp-config.php" ]; then
     echo "securebox_options_inferece_from_project: trying Wordpress [${_local_root}/wp-config.php]..."
     securebox_common_options_project_wordpress "${_local_root}/wp-config.php"
-  elif [ -f "${_local_root}/config.php" ]; then
+    return
+  fi
+
+  # Laravel?
+  if [ -f "${_local_root}/artisan" ]; then
+    echo "securebox_options_inferece_from_project: [${_local_root}/artisan] exists. Laravel?"
+    if [ -f "${_local_root}/.env" ]; then
+      echo "securebox_options_inferece_from_project: trying Laravel [${_local_root}/.env]..."
+      securebox_common_options_project_laravel "${_local_root}/.env"
+    fi
+    return
+  fi
+
+  # Moodle?
+  if [ -f "${_local_root}/config.php" ]; then
     echo "securebox_options_inferece_from_project: trying Moodle [${_local_root}/config.php]..."
     securebox_common_options_project_moodle "${_local_root}/config.php"
   elif [ -f "${_local_root}/moodle/config.php" ]; then
@@ -342,6 +362,45 @@ securebox_common_options_project_joomla ()
   SOURCE_MARIADB_HOST=$(grep -oP "\\\$host.+?'\K[^']+" "$1")
   SOURCE_MARIADB_USER=$(grep -oP "\\\$user.+?'\K[^']+" "$1")
   SOURCE_MARIADB_PASS=$(grep -oP "\\\$password.+?'\K[^']+" "$1")
+
+  export SOURCE_MARIADB_DBNAME
+  export SOURCE_MARIADB_HOST
+  export SOURCE_MARIADB_USER
+  export SOURCE_MARIADB_PASS
+}
+
+#######################################
+# Parse an typical Laravel .env file and export variables
+# See https://github.com/laravel/laravel/blob/8.x/.env.example
+# Globals:
+#   SOURCE_MARIADB_DBNAME
+#   SOURCE_MARIADB_HOST
+#   SOURCE_MARIADB_USER
+#   SOURCE_MARIADB_PASS
+# Arguments:
+#   /path/to/laravel/.env
+# Returns:
+#   None
+#######################################
+securebox_common_options_project_laravel ()
+{
+
+  _local_con=$(awk -F "=" '/DB_CONNECTION/ {print $2}' "$1")
+
+  if [ "$_local_con" != "mysqlaa" ]; then
+    echo "securebox_common_options_project_laravel"
+    echo "  WARNING: [$_local_con] does not seems to be MariaDB/MySQL. Continuing anyway"
+  fi
+
+  SOURCE_MARIADB_DBNAME=$(awk -F "=" '/DB_DATABASE/ {print $2}' "$1")
+
+  _local_dbhost=$(awk -F "=" '/DB_HOST/ {print $2}' "$1")
+  _local_dbport=$(awk -F "=" '/DB_PORT/ {print $2}' "$1")
+
+  SOURCE_MARIADB_HOST="${_local_dbhost}${_local_dbport-3306}"
+
+  SOURCE_MARIADB_USER=$(awk -F "=" '/DB_USERNAME/ {print $2}' "$1")
+  SOURCE_MARIADB_PASS=$(awk -F "=" '/DB_PASSWORD/ {print $2}' "$1")
 
   export SOURCE_MARIADB_DBNAME
   export SOURCE_MARIADB_HOST

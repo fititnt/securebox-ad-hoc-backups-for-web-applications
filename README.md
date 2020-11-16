@@ -1,36 +1,45 @@
-# securebox-ad-hoc-backups-for-web-applications v3.0
-**Human aided remote web application backup to your local workstation.
-Auto discovery features (like databases to mysqldump) from common web apps
-configuration files so you may not need much more than specify an SSH host and
-an the path of applicatin. Written in very portable POSIX shell script.
-Dedicated to Public Domain.**
+# Securebox ad hoc backups for web applications v3.0
+**Human aided remote web application backup to an local "securebox" workstation.
+Auto discovery features (like databases to dump) from common web apps
+configuration files: it means you may actually not need much more than specify
+an SSH host and an the path of application.** Written in very portable POSIX
+shell script. Dedicated to Public Domain.
 
+**Quick usage**:
 
-**s for human triggered local secure
-backups with auto-detection features for remote web applications.**
-
-**Quick usage**
+securebox-backup-download is designed to **not** need configuration files,
+neither require root access or be installed on remote host. If you can
+`ssh user@example.org`, you can do this:
 ```bash
-# If you can ssh user@example.org, you can do this:
-
 SOURCE_HOST="user@example.org" securebox-backup-download
 # user@example.org:/var/www files are rsync'ed to /backups/mirror/default/default/files
 ```
 
-```bash
-# If the path is an auto detected app, even without specify database options
-# it WILL get an database dump for you (requires mysqldump on the remote host)
+**Smart auto detection of extra data that needs backup** (you are _granted_ it will download the _right_
+database that the web app was using):
 
+When you specify an path and, after the content was mirror'ed to you secure local
+workstation, if `securebox-backup-library.sh` detect it's an know typical
+webapp, even if you don't specify database credentials, it will
+`ssh user@example.org mysqldump` and rsync back the dump. You don't even need
+to open ports!
+
+```bash
 SOURCE_HOST="joomlauser@example.org" SOURCE_PATH="/var/www/joomla/" securebox-backup-download
 # example.org:/var/www/joomla are rsync'ed  to /backups/mirror/default/default/files
-# Database mentioned on /var/www/joomla/configuration.php will be at /backups/mirror/default/default/mysqldump/default.dbname.sql
+# Database mentioned on /var/www/joomla/configuration.php will be at /backups/mirror/default/default/mysqldump/dbname.sql
 ```
 
 **With configuration files**
-```bash
 
-# securebox-backup-download load an securebox-backup.conf on directory you run
-# this command. But accept as parameter an file.
+Again: **By _philosophical goals_ the Ad Hoc means somewhat the opposite** of
+need to configure cron jobs, install extra software, etc just to make the backup
+job _right now_. **If** you have want to create configuration files, this is an
+way:
+
+```bash
+# securebox-backup-download load (if exists on disk) an securebox-backup.conf
+# on current working directory, You can also 
 
 tee my-securebox-backup.conf <<EOF
 SOURCE_HOST="moodleuser@example.com"
@@ -42,18 +51,7 @@ EOF
 securebox-backup-download ./my-securebox-backup.conf
 # Files at /backups/mirror/university-acme/department-of-physics-prod/files
 # MariaDB/MySQL at /backups/mirror/university-acme/department-of-physics-prod/mysqldump/dbname.sql
-
 ```
-
-<!--
-In short: the securebox-ad-hoc-backups-for-web-applications v2.0 helps who have
-to manage quick local backups for a lot of remote web applications, with the
-bare minimum need of point to an source host (requires you already authorized
-to SSH on server) and the base path of the application. Database options can
-be inferred from common CMS configurations, so you don't need to specify extra
-credentials.
-
--->
 
 ---
 
@@ -61,9 +59,13 @@ credentials.
 
 <!-- TOC depthFrom:2 -->
 
-- [Supported web applications](#supported-web-applications)
+- [Supported web applications (for advanced automatic backup)](#supported-web-applications-for-advanced-automatic-backup)
     - [Joomla](#joomla)
+    - [Laravel](#laravel)
     - [Moodle](#moodle)
+    - [_Your preferred web app_](#_your-preferred-web-app_)
+        - [Quickstart on how to add a new application (using as reference Joomla CMS)](#quickstart-on-how-to-add-a-new-application-using-as-reference-joomla-cms)
+        - [Similar app already have strategy I need](#similar-app-already-have-strategy-i-need)
 - [Already implemented features](#already-implemented-features)
 - [Changelog (the first public version)](#changelog-the-first-public-version)
 - [FAQ](#faq)
@@ -75,9 +77,10 @@ credentials.
 
 ---
 
-## Supported web applications
 
-Note: as v3.0 (draft) only files and MariaDB/MySQL databases are implemented on
+## Supported web applications (for advanced automatic backup)
+
+Note: as v3.0 only files and MariaDB/MySQL databases are implemented on
 web applications auto detected. Other databases (like PostgreSQL) as long as
 you how to translate an `mysqldump` command to another tool, can be _easily_
 added.
@@ -85,11 +88,78 @@ added.
 ### Joomla
 > Since v1.0
 
-### Moodle
-> Since 3.0 (draft)
+### Laravel
+> Since v3.0
 
+### Moodle
+> Since 3.0
+
+### _Your preferred web app_
+Since v1.0 this tool already supported backup of files. This alone can be at
+least half of the work you would need, even for unknow web applications.
+
+If your type of application already use MariaDB/MySQL, and you don't want to
+automate autodetection, then in addition to the `SOURCE_HOST` and `SOURCE_PATH`
+you will also to explicitly define: `SOURCE_MARIADB_DBNAME`,
+`SOURCE_MARIADB_HOST`, `SOURCE_MARIADB_USER`, and `SOURCE_MARIADB_PASS`.
+
+#### Quickstart on how to add a new application (using as reference Joomla CMS)
+
+If you really have several projects, and think could be easier just to implement
+auto detection, a quickstart would be say that, for an configuration file like
+this
+
+```php
+<?php
+class JConfig
+{
+    /* Database Settings */
+    public $host = 'localhost';
+    public $user = 'databaseuser';
+    public $password = 'password';
+    public $db = 'databasename';
+}
+```
+
+You would need to use as reference one an shell code
+(see https://shellhaters.org/) like this:
+
+```bash
+# https://unix.stackexchange.com/questions/230102/parse-credentials-from-php-configuration-file
+securebox_common_options_project_joomla ()
+{
+  SOURCE_MARIADB_DBNAME=$(grep -oP "\\\$db\s.+?'\K[^']+" "$1")
+  SOURCE_MARIADB_HOST=$(grep -oP "\\\$host.+?'\K[^']+" "$1")
+  SOURCE_MARIADB_USER=$(grep -oP "\\\$user.+?'\K[^']+" "$1")
+  SOURCE_MARIADB_PASS=$(grep -oP "\\\$password.+?'\K[^']+" "$1")
+
+  export SOURCE_MARIADB_DBNAME
+  export SOURCE_MARIADB_HOST
+  export SOURCE_MARIADB_USER
+  export SOURCE_MARIADB_PASS
+}
+```
+
+If you are willing to test, you can give a sample of config file of your project
+and we may help you to implement.
+
+<!--
+#### Similar app already have strategy I need
+If some web application on this list already is know to backup an item your
+target 
+
+To implement auto
+
+
+so, in worst case
+scenario, it will not just detect how to automatically do extra steps, like
+dum
+-->
 
 ## Already implemented features
+
+> This list os from the [v2.0 release](https://github.com/fititnt/securebox-ad-hoc-backups-for-web-applications/releases/tag/v2.0)
+  and still not updated to v3.0 new features.
 
 - For each "backup job", assumes the concept of user defined 
   - `ORGANIZATION` (default: `default`)
