@@ -2,13 +2,13 @@
 **Human aided remote web application backup to an local "securebox" workstation.
 Auto discovery features (like databases to dump) from common web apps
 configuration files: it means you may actually not need much more than specify
-an SSH host and an the path of application.** Written in very portable POSIX
+an SSH host and the path of the application.** Written in a very portable POSIX
 shell script. Dedicated to Public Domain.
 
 **Quick usage**:
 
 securebox-backup-download is designed to **not** need configuration files,
-neither require root access or be installed on remote host. If you can
+neither require root access or be installed on a remote host. If you can
 `ssh user@example.org`, you can do this:
 ```bash
 SOURCE_HOST="user@example.org" securebox-backup-download
@@ -18,7 +18,7 @@ SOURCE_HOST="user@example.org" securebox-backup-download
 **Smart auto detection of extra data that needs backup** (you are _granted_ it will download the _right_
 database that the web app was using):
 
-When you specify an path and, after the content was mirror'ed to you secure local
+When you specify a path and, after the content was mirrored to you secure local
 workstation, if `securebox-backup-library.sh` detect it's an know typical
 webapp, even if you don't specify database credentials, it will
 `ssh user@example.org mysqldump` and rsync back the dump. You don't even need
@@ -33,7 +33,7 @@ SOURCE_HOST="joomlauser@example.org" SOURCE_PATH="/var/www/joomla/" securebox-ba
 **With configuration files**
 
 Again: **By _philosophical goals_ the Ad Hoc means somewhat the opposite** of
-need to configure cron jobs, install extra software, etc just to make the backup
+the need to configure cron jobs, install extra software, etc just to make the backup
 job _right now_. **If** you have want to create configuration files, this is an
 way:
 
@@ -81,9 +81,8 @@ securebox-backup-download ./my-securebox-backup.conf
 ## Supported web applications (for advanced automatic backup)
 
 Note: as v3.0 only files and MariaDB/MySQL databases are implemented on
-web applications auto detected. Other databases (like PostgreSQL) as long as
-you how to translate an `mysqldump` command to another tool, can be _easily_
-added.
+web applications auto detected. Other databases (like PostgreSQL)you know how to
+translate an `mysqldump` command to another tool, can be _easily_ added.
 
 ### Joomla
 > Since v1.0
@@ -96,7 +95,7 @@ added.
 
 ### _Your preferred web app_
 Since v1.0 this tool already supported backup of files. This alone can be at
-least half of the work you would need, even for unknow web applications.
+least half of the work you would need, even for unknown web applications.
 
 If your type of application already use MariaDB/MySQL, and you don't want to
 automate autodetection, then in addition to the `SOURCE_HOST` and `SOURCE_PATH`
@@ -215,13 +214,13 @@ _TODO: maybe we warn the user when we detect the error? This would reduce need
 to document this workaround (fititnt, 2020-11-16 05:16 UTC)_
 
 ### 2. '/tmp/databasedump.lock' lock issues / Why do I have to delete manually?
-> `MYSQLDUMP_EXCLUSIVELOCK=` (empty) change this **intentional** behavior
+> `MYSQLDUMP_EXCLUSIVELOCK=` (empty) change this intentional behavior
 
-The `/tmp/databasedump.lock` (`MYSQLDUMP_TMPANDLOCKDIR`) is both an temporary
-dir and a lock mecanism (it means you don't overload your server with multiple
-runs). It's intentional require the user to manually delete instead of do it.
+The `/tmp/databasedump.lock` (MYSQLDUMP_TMPANDLOCKDIR) is both a temporary dir
+and a lock mechanism (it means you don't overload your server with multiple
+runs). It's intentional to require the user to manually delete instead of do it.
 
-This issue is likely to happens if you last atempt timeout'ed (see FAQ 1).
+This issue is likely to happen if you last attempt timeouted (see FAQ 1).
 
 ## License
 Public Domain

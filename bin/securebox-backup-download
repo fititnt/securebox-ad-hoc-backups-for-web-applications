@@ -218,6 +218,10 @@ securebox_backup_download_execute_database_mydumper() {
 # algoritm to make future dumps much faster (ideal for large databases and/or
 # slower internet)
 #
+# TO DOs
+#   Give alternative to user don't pass --password="PASS" to mysqldump, e.g. the
+#   "mysqldump: [Warning] Using a password on the command line interface can be insecure."
+#
 # Globals:
 #   MYSQLDUMP_TMPANDLOCKDIR  Remote Temp And Lock directory. If exist
 #                            this script will be aborted
@@ -265,7 +269,7 @@ securebox_backup_download_execute_database_mysqldump()
   # Note: password as parameter is not really safe on shared hosting.
   # One alternative could me use .my.cnf file with data
   # shellcheck disable=SC2029
-  ssh "${SOURCE_MARIADB_SSHHOST}" "mysqldump --single-transaction --quick --user='$SOURCE_MARIADB_USER' --password='$SOURCE_MARIADB_PASS' '$SOURCE_MARIADB_DBNAME' > $MYSQLDUMP_TMPANDLOCKDIR/$SOURCE_MARIADB_DBNAME.sql"
+  ssh "${SOURCE_MARIADB_SSHHOST}" "mysqldump --single-transaction --quick --host='$SOURCE_MARIADB_HOST' --user='$SOURCE_MARIADB_USER' --password='$SOURCE_MARIADB_PASS' '$SOURCE_MARIADB_DBNAME' > $MYSQLDUMP_TMPANDLOCKDIR/$SOURCE_MARIADB_DBNAME.sql"
 
   rsync --verbose --compress "${SOURCE_MARIADB_SSHHOST}:$MYSQLDUMP_TMPANDLOCKDIR/$SOURCE_MARIADB_DBNAME.sql" "$LOCALMIRROR_MYSQLDUMP_SQLFILE"
   set +x
@@ -330,6 +334,7 @@ securebox_backup_download_results() {
   echo ""
   echo "$PROGRAM_NAME finished."
   echo "Your mirrored data is at $LOCALMIRROR_THISPROJECT"
+  du --human-readable --max-depth=1 $LOCALMIRROR_THISPROJECT
   echo ""
 }
 
