@@ -223,4 +223,22 @@ runs). It's intentional to require the user to manually delete instead of do it.
 This issue is likely to happen if you last attempt timeouted (see FAQ 1).
 
 ## License
-Public Domain
+[![Public Domain](https://i.creativecommons.org/p/zero/1.0/88x31.png)](UNLICENSE)
+
+To the extent possible under law, [Emerson Rocha](https://github.com/fititnt)
+has waived all copyright and related or neighboring rights to this work to
+[Public Domain](UNLICENSE).
+
+<!--
+Boring links for _why_ 0BSD is added as alternative to The Unlicense.
+
+- http://landley.net/toybox/license.html
+- http://landley.net/toybox/0bsd-mckusick.txt
+- https://en.wikipedia.org/wiki/Public-domain-equivalent_license
+-->
+
+As alternative (_"Unlicense OR 0BSD"_; choose and use the license of
+your needs) this project is also released with the Open Source Initiative
+approved [Zero-Clause BSD](https://opensource.org/licenses/0BSD) License.
+
+> SPDX-License-Identifier: Unlicense OR 0BSD

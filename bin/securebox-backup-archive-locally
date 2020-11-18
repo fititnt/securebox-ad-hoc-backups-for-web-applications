@@ -15,7 +15,8 @@
 #         NOTES:  ---
 #        AUTHOR:  Emerson Rocha <rocha[at]ieee.org>
 #       COMPANY:  Etica.AI
-#       LICENSE:  Public Domain
+#       LICENSE:  Public Domain / Zero-Clause BSD
+#                 SPDX-License-Identifier: Unlicense OR 0BSD
 #       VERSION:  1.0 (draft)
 #       CREATED:  2020-11-14 03:01 UTC Created. Based on securebox-backup-download v1.3
 #      REVISION:  ---

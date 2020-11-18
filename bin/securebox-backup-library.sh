@@ -17,7 +17,8 @@
 #         NOTES:  ---
 #        AUTHOR:  Emerson Rocha <rocha[at]ieee.org>
 #       COMPANY:  Etica.AI
-#       LICENSE:  Public Domain
+#       LICENSE:  Public Domain / Zero-Clause BSD
+#                 SPDX-License-Identifier: Unlicense OR 0BSD
 #       VERSION:  v2.1
 #       CREATED:  2020-11-14 23:52 UTC Created. Based on securebox-backup-download v2.0
 #      REVISION:  2020-11-16 05:06 UTC Autodetect Moodle LMS configurations
