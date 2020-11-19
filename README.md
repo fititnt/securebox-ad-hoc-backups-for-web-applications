@@ -60,11 +60,12 @@ See [Quickstart](#quickstart) to check if you like the idea. Then look at the
 - [Design choises](#design-choises)
     - [Why Securebox Ad Hoc Backups is different](#why-securebox-ad-hoc-backups-is-different)
         - [Agentless, zero-installation, automatic discovery of remote web applications without root](#agentless-zero-installation-automatic-discovery-of-remote-web-applications-without-root)
+        - [Don't need open ports of database servers to save a copy locally](#dont-need-open-ports-of-database-servers-to-save-a-copy-locally)
         - [No special dependencies requeriments on remote server](#no-special-dependencies-requeriments-on-remote-server)
         - [Simple installation on local workstation with zero to none extra dependency requirements](#simple-installation-on-local-workstation-with-zero-to-none-extra-dependency-requirements)
             - [Exceptions on advanced cases](#exceptions-on-advanced-cases)
         - [Concept of `ORGANIZATION` and `PROJECT` and to `SUBDIR_*` to simplify defaults](#concept-of-organization-and-project-and-to-subdir_-to-simplify-defaults)
-            - [Why we may choose to not make it even more configurable](#why-we-may-choose-to-not-make-it-even-more-configurable)
+            - [Why we may choose to not make it even more configurable than `ORGANIZATION` + `PROJECT` + `SUBDIR_*`](#why-we-may-choose-to-not-make-it-even-more-configurable-than-organization--project--subdir_)
             - [Why we choose do archive entire folders, even if tools like mysqldump export single file](#why-we-choose-do-archive-entire-folders-even-if-tools-like-mysqldump-export-single-file)
 - [Installation](#installation)
     - [Android](#android)
@@ -328,6 +329,10 @@ workstation. Then, based on the local copy, if detect that is part of the
 it will try additional apply extra [Strategies](#strategies) for this specific
 software over ssh and then copy to local using rsync.
 
+#### Don't need open ports of database servers to save a copy locally
+
+> TODO: ...
+
 #### No special dependencies requeriments on remote server
 As long as you can use SSH (plain FTP will not work; but "SFTP/SCP" may already
 be _another name_ for SSH) even average shared cheap web hosting are likely to
@@ -345,7 +350,10 @@ also common tools. Like `pg_dump` for PostgreSQL, `mongodump` MongoDB.
 
 #### Simple installation on local workstation with zero to none extra dependency requirements
 While be easy to install does not make Securebox Ad Hoc Backups really different
-from alternatives it still worth to mention.
+from alternatives, on very specific cases this is a life saver. For example,
+`mongodump` is know to complain if the version of mongodump and the server
+are different, and if you work with many different projects it would be not
+practical have all then installed locally.
 
 The bare minimum requeriments are `ssh` and (something that may not installed
 on some nearly initialized operational systems) the `rsync` command. You also
@@ -396,20 +404,27 @@ output. So the `SUBDIR_*` is used to help with evolution over the years to mix
 different types of output and still be backwards compatible. Maybe even like 10
 or 20 years.
 
-##### Why we may choose to not make it even more configurable
+##### Why we may choose to not make it even more configurable than `ORGANIZATION` + `PROJECT` + `SUBDIR_*`
 While you are free to make your own fork to fit better your needs and publish
 for the rest of the world, things that could over complicate the Ad Hoc usage
 (without configuration file) or (not really an priority, but may be pertinent)
 add too much extra code **and could not work by just adding an extra
 `SUBDIR_*`**, we may choose to not implement.
 
+**Breaking complex issues in smaller tasks**
+
 Depending of how complex is some of your user cases, it may be pertinent to
 create two tasks. For example, our [Moodle](#moodle) driver is able to do full
-mirroring if both moodle (Application code) and moodledata (application
-"downloads", they are files on disk, not on database) if the layout is somewhat
-specific. If you try to use this project on a client that do not follow this
+mirroring if both `moodle` (Application code) and `moodledata` (application
+"downloads", they are files on disk, not on database) **if the layout is somewhat
+specific**. If you try to use this project on a client that do not follow this
 pattern you may need to use one task to download only the moodle (Application
-code) and the database, and another task just do download the moodledata.
+code) and the database, and another task just do download the `moodledata`.
+
+On the very specific case of Moodle, actually the `moodle` (Application code)
+don't change as often as the `moodledata` + the database itself so even if use
+this tool on cron instead of Ad Hoc, would still makes sense not backup that
+often the `moodle` (Application code). Be creative!
 
 ##### Why we choose do archive entire folders, even if tools like mysqldump export single file
 To make things simpler tools who archive either locally or upload for a service
