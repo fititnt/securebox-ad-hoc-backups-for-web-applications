@@ -15,6 +15,8 @@ SOURCE_HOST="user@example.org" securebox-backup-download
 # user@example.org:/var/www files are rsync'ed to /backups/mirror/default/default/files
 ```
 
+**Smart autodiscovery of typical web applications**
+
 One of the main advantages of `securebox-backup-download` over plain rsync is
 the smart discover of common web applications. On this example you don't need to
 specify the `SOURCE_MARIADB_DBNAME`, `SOURCE_MARIADB_USER` and
@@ -44,7 +46,7 @@ See [Quickstart](#quickstart) to check if you like the idea. Then look at the
         - [1. Timeouts on MariaDB/MySQL with very large database dumps](#1-timeouts-on-mariadbmysql-with-very-large-database-dumps)
         - [2. '/tmp/databasedump.lock' lock issues / Why do I have to delete manually?](#2-tmpdatabasedumplock-lock-issues--why-do-i-have-to-delete-manually)
 - [Internals](#internals)
-    - [Supported web applications (for advanced automatic backup)](#supported-web-applications-for-advanced-automatic-backup)
+    - [List of auto discovered web applications](#list-of-auto-discovered-web-applications)
         - [Joomla](#joomla)
         - [Laravel](#laravel)
         - [Moodle](#moodle)
@@ -55,6 +57,11 @@ See [Quickstart](#quickstart) to check if you like the idea. Then look at the
             - [MariaDB/MySQL - mysqldump](#mariadbmysql---mysqldump)
     - [Extend Securebox Backups](#extend-securebox-backups)
         - [Quickstart on how to add a new application (using as reference Joomla CMS)](#quickstart-on-how-to-add-a-new-application-using-as-reference-joomla-cms)
+- [Why Securebox Ad Hoc Backups is different](#why-securebox-ad-hoc-backups-is-different)
+    - [Agentless, zero-installation, automatic discovery of remote web applications without root](#agentless-zero-installation-automatic-discovery-of-remote-web-applications-without-root)
+    - [No special dependencies requeriments on remote server](#no-special-dependencies-requeriments-on-remote-server)
+    - [Simple installation on local workstation with zero to none extra dependency requirements](#simple-installation-on-local-workstation-with-zero-to-none-extra-dependency-requirements)
+        - [Exceptions on advanced cases](#exceptions-on-advanced-cases)
 - [Installation](#installation)
     - [Android](#android)
         - [Android installation with Termux](#android-installation-with-termux)
@@ -189,8 +196,7 @@ This issue is likely to happen if you last attempt timeouted (see FAQ 1).
 
 ## Internals
 
-### Supported web applications (for advanced automatic backup)
-
+### List of auto discovered web applications
 Note: as v3.0 only files and MariaDB/MySQL databases are implemented on
 web applications auto detected. Other databases (like PostgreSQL)you know how to
 translate an `mysqldump` command to another tool, can be _easily_ added.
@@ -275,6 +281,57 @@ so, in worst case
 scenario, it will not just detect how to automatically do extra steps, like
 dum
 -->
+
+## Why Securebox Ad Hoc Backups is different
+
+### Agentless, zero-installation, automatic discovery of remote web applications without root
+Securebox Ad Hoc Backups don't need to be installed on remote server. It
+actually make things even simpler.
+
+In short, if runs `rsync` commands to mirror remote files on your local
+workstation. Then, based on the local copy, if detect that is part of the
+[List of auto discovered web applications](#list-of-auto-discovered-web-applications)
+it will try additional apply extra [Strategies](#strategies) for this specific
+software over ssh and then copy to local using rsync.
+
+### No special dependencies requeriments on remote server
+As long as you can use SSH (plain FTP will not work; but "SFTP/SCP" may already
+be _another name_ for SSH) even average shared cheap web hosting are likely to
+already have everyting you need.
+
+For file transfer, we use `rsync`. When have to execute an remote command, like
+dump a file that can be downloaded to local workstation, we use
+`ssh user@example.org 'db-command export mydb > file.sql'`.
+
+As reference, the "db-command" for MariaDB/MySQL is `mysqldump`, a tool that
+already often is already installed on MariaDB/MySQL clients/servers.
+
+New strategies, for sake of simplicitly and portability, are also likely to use
+also common tools. Like `pg_dump` for PostgreSQL, `mongodump` MongoDB.
+
+### Simple installation on local workstation with zero to none extra dependency requirements
+While be easy to install does not make Securebox Ad Hoc Backups really different
+from alternatives it still worth to mention.
+
+The bare minimum requeriments are `ssh` and (something that may not installed
+on some nearly initialized operational systems) the `rsync` command. You also
+need be able to connect from `ssh`/`rsync` from your machine to the remote host.
+With only these requeriments, the `securebox-backup-download` already will be
+able to make a full copy of remote applications mirroed to your local
+workstation. Even the database exports (and in the furure, imports) are done
+only on remote servers, so you don't even need `mysqldump` / `pg_dump` /
+`mongodump` / etc installed.
+
+#### Exceptions on advanced cases
+
+`securebox-backup-archive-locally` (to compress/encrypt) and
+`securebox-backup-archive-s3` (to upload to S3 compatible servers) are likely
+to need some extra dependencies on the Securebox workstation if you want more
+than just mirror of remote application.
+
+Note: if somewhat becomes possible to not even install s3cmd and just upload
+to S3 using plain shell script, we may choose to implement this! See
+[issues#2](https://github.com/fititnt/securebox-ad-hoc-backups-for-web-applications/issues/2).
 
 ## Installation
 
