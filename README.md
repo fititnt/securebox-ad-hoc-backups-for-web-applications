@@ -443,7 +443,25 @@ just add an extra line on your script to uncompress the file from the folder.
 #### Android installation with Termux
 - [Termux on Google Play](https://play.google.com/store/apps/details?id=com.termux&hl=pt_BR&gl=US)
 
-> TODO: document how to install on Termux (fititnt, 2020-11-19 05:04 UTC)
+The well documented file that explain how to both boostrap an newly installed
+Termux and how to install the Securebox is at
+[extras/securebox-termux-full-setup.sh](extras/securebox-termux-full-setup.sh).
+
+
+**[Recommended] 4 steps: download, review, execute, and (if worked) delete the installer**
+
+```bash
+curl https://raw.githubusercontent.com/fititnt/securebox-ad-hoc-backups-for-web-applications/main/extra/securebox-termux-full-install.sh --output ~/securebox.sh
+cat ~/securebox.sh
+sh ~/securebox.sh
+rm ~/securebox.sh
+```
+
+**[Not recommended] One-liner installer**
+
+```bash
+sh -c "$(curl -fsSL https://raw.githubusercontent.com/fititnt/securebox-ad-hoc-backups-for-web-applications/main/extra/securebox-termux-full-install.sh)"
+```
 
 ### Linux
 #### Generic Linux Installation
