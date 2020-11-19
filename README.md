@@ -1,4 +1,4 @@
-# Securebox ad hoc backups for web applications v3.0
+# Securebox ad hoc backups for web applications v4.0
 **Human aided remote web application backup to an local "securebox" workstation.
 Auto discovery features (like databases to dump) from common web apps
 configuration files: it means you may actually not need much more than specify
@@ -57,11 +57,13 @@ See [Quickstart](#quickstart) to check if you like the idea. Then look at the
             - [MariaDB/MySQL - mysqldump](#mariadbmysql---mysqldump)
     - [Extend Securebox Backups](#extend-securebox-backups)
         - [Quickstart on how to add a new application (using as reference Joomla CMS)](#quickstart-on-how-to-add-a-new-application-using-as-reference-joomla-cms)
-- [Why Securebox Ad Hoc Backups is different](#why-securebox-ad-hoc-backups-is-different)
-    - [Agentless, zero-installation, automatic discovery of remote web applications without root](#agentless-zero-installation-automatic-discovery-of-remote-web-applications-without-root)
-    - [No special dependencies requeriments on remote server](#no-special-dependencies-requeriments-on-remote-server)
-    - [Simple installation on local workstation with zero to none extra dependency requirements](#simple-installation-on-local-workstation-with-zero-to-none-extra-dependency-requirements)
-        - [Exceptions on advanced cases](#exceptions-on-advanced-cases)
+- [Design choises](#design-choises)
+    - [Why Securebox Ad Hoc Backups is different](#why-securebox-ad-hoc-backups-is-different)
+        - [Agentless, zero-installation, automatic discovery of remote web applications without root](#agentless-zero-installation-automatic-discovery-of-remote-web-applications-without-root)
+        - [No special dependencies requeriments on remote server](#no-special-dependencies-requeriments-on-remote-server)
+        - [Simple installation on local workstation with zero to none extra dependency requirements](#simple-installation-on-local-workstation-with-zero-to-none-extra-dependency-requirements)
+            - [Exceptions on advanced cases](#exceptions-on-advanced-cases)
+        - [Concept of `ORGANIZATION` and `PROJECT` and to `SUBDIR_*` to simplify defaults](#concept-of-organization-and-project-and-to-subdir_-to-simplify-defaults)
 - [Installation](#installation)
     - [Android](#android)
         - [Android installation with Termux](#android-installation-with-termux)
@@ -70,6 +72,34 @@ See [Quickstart](#quickstart) to check if you like the idea. Then look at the
         - [Tails installation](#tails-installation)
     - [Windows](#windows)
         - [Windows Subsystem for Linux installation](#windows-subsystem-for-linux-installation)
+- [Variables reference](#variables-reference)
+    - [Most used variables](#most-used-variables)
+        - [`ORGANIZATION`](#organization)
+        - [`PROJECT`](#project)
+        - [`SOURCE_HOST`](#source_host)
+        - [`SOURCE_PATH`](#source_path)
+    - [Extra variables](#extra-variables)
+        - [`LOCALARCHIVES_BASEPATH`](#localarchives_basepath)
+        - [`LOCALMIRROR_BASEPATH`](#localmirror_basepath)
+        - [`LOCALTMP`](#localtmp)
+        - [`SOURCE_MARIADB_DBNAME`](#source_mariadb_dbname)
+        - [`SOURCE_MARIADB_HOST`](#source_mariadb_host)
+        - [`SOURCE_MARIADB_PASS`](#source_mariadb_pass)
+        - [`SOURCE_MARIADB_USER`](#source_mariadb_user)
+        - [`SUBDIR_FILES`](#subdir_files)
+        - [`SUBDIR_MYSQLDUMP`](#subdir_mysqldump)
+    - [Variables to disable skip (disable) internal steps](#variables-to-disable-skip-disable-internal-steps)
+        - [`SKIP_CHECK_DONT_RUN_AS_ROOT_LOCALLY`](#skip_check_dont_run_as_root_locally)
+        - [`SKIP_DOWNLOAD_RSYNC`](#skip_download_rsync)
+        - [`SKIP_MYSQLDUMP`](#skip_mysqldump)
+        - [`SKIP_WEBAPP_TYPE_AUTODETECTION`](#skip_webapp_type_autodetection)
+    - [Reserved variables](#reserved-variables)
+        - [`TARGET_HOST`](#target_host)
+        - [`TARGET_MARIADB_DBNAME`](#target_mariadb_dbname)
+        - [`TARGET_MARIADB_HOST`](#target_mariadb_host)
+        - [`TARGET_MARIADB_PASS`](#target_mariadb_pass)
+        - [`TARGET_MARIADB_USER`](#target_mariadb_user)
+        - [`TARGET_PATH`](#target_path)
 - [License](#license)
 
 <!-- /TOC -->
@@ -282,9 +312,11 @@ scenario, it will not just detect how to automatically do extra steps, like
 dum
 -->
 
-## Why Securebox Ad Hoc Backups is different
+## Design choises
 
-### Agentless, zero-installation, automatic discovery of remote web applications without root
+### Why Securebox Ad Hoc Backups is different
+
+#### Agentless, zero-installation, automatic discovery of remote web applications without root
 Securebox Ad Hoc Backups don't need to be installed on remote server. It
 actually make things even simpler.
 
@@ -294,7 +326,7 @@ workstation. Then, based on the local copy, if detect that is part of the
 it will try additional apply extra [Strategies](#strategies) for this specific
 software over ssh and then copy to local using rsync.
 
-### No special dependencies requeriments on remote server
+#### No special dependencies requeriments on remote server
 As long as you can use SSH (plain FTP will not work; but "SFTP/SCP" may already
 be _another name_ for SSH) even average shared cheap web hosting are likely to
 already have everyting you need.
@@ -309,7 +341,7 @@ already often is already installed on MariaDB/MySQL clients/servers.
 New strategies, for sake of simplicitly and portability, are also likely to use
 also common tools. Like `pg_dump` for PostgreSQL, `mongodump` MongoDB.
 
-### Simple installation on local workstation with zero to none extra dependency requirements
+#### Simple installation on local workstation with zero to none extra dependency requirements
 While be easy to install does not make Securebox Ad Hoc Backups really different
 from alternatives it still worth to mention.
 
@@ -322,7 +354,7 @@ workstation. Even the database exports (and in the furure, imports) are done
 only on remote servers, so you don't even need `mysqldump` / `pg_dump` /
 `mongodump` / etc installed.
 
-#### Exceptions on advanced cases
+##### Exceptions on advanced cases
 
 `securebox-backup-archive-locally` (to compress/encrypt) and
 `securebox-backup-archive-s3` (to upload to S3 compatible servers) are likely
@@ -332,6 +364,21 @@ than just mirror of remote application.
 Note: if somewhat becomes possible to not even install s3cmd and just upload
 to S3 using plain shell script, we may choose to implement this! See
 [issues#2](https://github.com/fititnt/securebox-ad-hoc-backups-for-web-applications/issues/2).
+
+#### Concept of `ORGANIZATION` and `PROJECT` and to `SUBDIR_*` to simplify defaults
+
+> Examples (v3.0) using only defaults
+>
+> - `$LOCALMIRROR_BASEPATH/$ORGANIZATION/$PROJECT`: Contain all mirrored data
+>   - `/backups/mirror/default/default`
+> - `$LOCALMIRROR_BASEPATH/$ORGANIZATION/$PROJECT/$SUBDIR_FILES`: rsync'ed files
+>   - `/backups/mirror/default/default/files`
+> - `$LOCALMIRROR_BASEPATH/$ORGANIZATION/$PROJECT/$SUBDIR_MYSQLDUMP`: mysqldump result for current project
+>   - `/backups/mirror/default/default/mysqldump`
+
+Securebox backups whatever is your current task, at least for local process,
+works with the concept of `ORGANIZATION` and `PROJECT`. If you do not set one
+of these they will default to _default_.
 
 ## Installation
 
@@ -354,6 +401,61 @@ to S3 using plain shell script, we may choose to implement this! See
 #### Windows Subsystem for Linux installation
 - See [Windows Subsystem for Linux Installation Guide for Windows 10](https://docs.microsoft.com/windows/wsl/install-win10)
 
+## Variables reference
+
+<!--
+Internal note: we can use https://sortmylist.com/ to autosort the names.
+-->
+
+### Most used variables
+#### `ORGANIZATION`
+- Since: v1.0
+#### `PROJECT`
+- Since: v1.0
+#### `SOURCE_HOST`
+- Since: v1.0
+#### `SOURCE_PATH`
+- Since: v1.0
+
+### Extra variables
+
+#### `LOCALARCHIVES_BASEPATH`
+- Since: v2.0
+#### `LOCALMIRROR_BASEPATH`
+- Since: v2.0
+#### `LOCALTMP`
+- Since: v2.0
+#### `SOURCE_MARIADB_DBNAME`
+- Since: v2.0
+#### `SOURCE_MARIADB_HOST`
+- Since: v2.0
+#### `SOURCE_MARIADB_PASS`
+- Since: v2.0
+#### `SOURCE_MARIADB_USER`
+- Since: v2.0
+#### `SUBDIR_FILES`
+- Since: v2.0
+#### `SUBDIR_MYSQLDUMP`
+- Since: v2.0
+
+### Variables to disable skip (disable) internal steps
+> Note: these variables are subject to renaming. Since they we're not documented
+until 3.0+, we may choose to not explain migration steps.
+
+#### `SKIP_CHECK_DONT_RUN_AS_ROOT_LOCALLY`
+#### `SKIP_DOWNLOAD_RSYNC`
+#### `SKIP_MYSQLDUMP`
+#### `SKIP_WEBAPP_TYPE_AUTODETECTION`
+
+### Reserved variables
+These variables are planned, but not implemented.
+
+#### `TARGET_HOST`
+#### `TARGET_MARIADB_DBNAME`
+#### `TARGET_MARIADB_HOST`
+#### `TARGET_MARIADB_PASS`
+#### `TARGET_MARIADB_USER`
+#### `TARGET_PATH`
 
 ## License
 [![Public Domain](https://i.creativecommons.org/p/zero/1.0/88x31.png)](UNLICENSE)
