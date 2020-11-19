@@ -67,7 +67,6 @@ securebox-backup-download ./my-securebox-backup.conf
         - [Quickstart on how to add a new application (using as reference Joomla CMS)](#quickstart-on-how-to-add-a-new-application-using-as-reference-joomla-cms)
         - [Similar app already have strategy I need](#similar-app-already-have-strategy-i-need)
 - [Already implemented features](#already-implemented-features)
-- [Changelog (the first public version)](#changelog-the-first-public-version)
 - [FAQ](#faq)
     - [1. Timeouts on MariaDB/MySQL large database dumps](#1-timeouts-on-mariadbmysql-large-database-dumps)
     - [2. '/tmp/databasedump.lock' lock issues / Why do I have to delete manually?](#2-tmpdatabasedumplock-lock-issues--why-do-i-have-to-delete-manually)
@@ -188,14 +187,6 @@ dum
     - You can decide to archive the mirrored database to save space, but this
       is not the default behavior since rsync requires the uncompresed .sql
       files
-
-## Changelog (the first public version)
-This is the first public version of securebox-ad-hoc-backups-for-web-applications.
-Work is based on previous (not yet released work):
-
-> - securebox-backup-download v2.0
-> - securebox-backup-library.sh v2.0
-> - securebox-backup-archive-locally v1.0 (draft)
 
 ## FAQ
 ### 1. Timeouts on MariaDB/MySQL large database dumps

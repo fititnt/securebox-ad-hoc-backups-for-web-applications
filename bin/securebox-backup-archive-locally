@@ -48,6 +48,8 @@ PROGRAM_NAME=$(basename "$0")
 # See securebox-backup-library.sh for common defaults.
 
 #### securebox-backup-archive-locally exclusive defaults _______________________
+export SECUREBOX_BACKUP_ARCHIVE_LOCALLY_VERSION="1.0"
+
 DEFAULT__TIMESTAMP=$(date +'%FT%T')
 
 #################################  Defaults, END ###############################

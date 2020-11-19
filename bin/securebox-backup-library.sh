@@ -47,6 +47,7 @@
 #       (fititnt, 2020-11-15 01:59 BRT)
 
 ################################  Defaults, START ##############################
+export SECUREBOX_BACKUP_LIBRARY_VERSION="2.1.1"
 
 #TIMESTAMP=$(date +'%FT%T')
 
@@ -163,6 +164,9 @@ $PROGRAM_NAME (via securebox-backup-library.sh) --help-bootstrap
 #######################################
 securebox_common_debug()
 {
+
+  _local_versions=$(env | grep '^SECUREBOX')
+
   # printf "========== securebox_common_debug, start ==========\n"
   printf "\nGeneral\n"
   echo "  ORGANIZATION: $ORGANIZATION"
@@ -204,6 +208,9 @@ securebox_common_debug()
   echo "  DOWNLOAD_RSYNC_EXTRAOPTIONS: $DOWNLOAD_RSYNC_EXTRAOPTIONS"
   echo "  LOCALMIRROR_BASEPATH: $LOCALMIRROR_BASEPATH"
   echo "  LOCALMIRROR_THISPROJECT: $LOCALMIRROR_THISPROJECT"
+
+  echo $_local_versions
+
   # echo "MYSQLDUMP_TMPANDLOCKDIR: $MYSQLDUMP_TMPANDLOCKDIR"
   # printf "========== securebox_common_debug, end ==========\n"
 }
@@ -258,8 +265,6 @@ securebox_common_options_securebox_confs() {
     . "$_localvar_defaultconf"
   fi
 
-  # Bug: securebox-backup-download --help still fail (fititnt, 2020-11-16 06:13 UTC)
-
   # Only check if file first argument is an file if is not an typical help argument
   if [ "$_localvar_cliopt1" != " -h" ] &&
     [ "$_localvar_cliopt1" != "--help" ] &&
@@ -278,16 +283,15 @@ securebox_common_options_securebox_confs() {
         echo "Aborting now."
         exit 2
       fi
-    # shellcheck source=/dev/null
-    . "$_localvar_cliopt1"
+      # shellcheck source=/dev/null
+      . "$_localvar_cliopt1"
+    else
+      echo "securebox_common_options_securebox_confs:"
+      echo "ERROR! [$_localvar_cliopt1] (first cli argument) is not an readable config file"
+      echo "    $PROGRAM_NAME --help"
+      echo "Aborting now."
+      exit 2
     fi
-
-  else
-    echo "securebox_common_options_securebox_confs:"
-    echo "ERROR! [$_localvar_cliopt1] (first cli argument) is not an readable config file"
-    echo "    $PROGRAM_NAME --help"
-    echo "Aborting now."
-    exit 2
   fi
 }
 
