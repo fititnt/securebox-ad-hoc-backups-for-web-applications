@@ -64,6 +64,8 @@ See [Quickstart](#quickstart) to check if you like the idea. Then look at the
         - [Simple installation on local workstation with zero to none extra dependency requirements](#simple-installation-on-local-workstation-with-zero-to-none-extra-dependency-requirements)
             - [Exceptions on advanced cases](#exceptions-on-advanced-cases)
         - [Concept of `ORGANIZATION` and `PROJECT` and to `SUBDIR_*` to simplify defaults](#concept-of-organization-and-project-and-to-subdir_-to-simplify-defaults)
+            - [Why we may choose to not make it even more configurable](#why-we-may-choose-to-not-make-it-even-more-configurable)
+            - [Why we choose do archive entire folders, even if tools like mysqldump export single file](#why-we-choose-do-archive-entire-folders-even-if-tools-like-mysqldump-export-single-file)
 - [Installation](#installation)
     - [Android](#android)
         - [Android installation with Termux](#android-installation-with-termux)
@@ -367,8 +369,19 @@ to S3 using plain shell script, we may choose to implement this! See
 
 #### Concept of `ORGANIZATION` and `PROJECT` and to `SUBDIR_*` to simplify defaults
 
-> Examples (v3.0) using only defaults
->
+Securebox backups whatever is your current task, at least for local processing,
+works with the concept of `ORGANIZATION` and `PROJECT`. If you do not set one
+of these they will default to _default_ and _default_ . **This design choice is
+not necessarily an advantage over alternatives, because is... well,
+opinionated**. But it simplifies the ad hoc usagle without configuration files.
+This also makes easier to add and (this takes lots of time) document some
+planned advanced functionality (like allow mount/umount encrypted volumes
+before/after running Securebox Backups).
+
+Less obvious, but still pertinent, is the concept of `SUBDIR_*` (as v3.0 only
+`SUBDIR_FILES="files"` and `SUBDIR_MYSQLDUMP="mysqldump"`). See the following
+example:
+
 > - `$LOCALMIRROR_BASEPATH/$ORGANIZATION/$PROJECT`: Contain all mirrored data
 >   - `/backups/mirror/default/default`
 > - `$LOCALMIRROR_BASEPATH/$ORGANIZATION/$PROJECT/$SUBDIR_FILES`: rsync'ed files
@@ -376,9 +389,38 @@ to S3 using plain shell script, we may choose to implement this! See
 > - `$LOCALMIRROR_BASEPATH/$ORGANIZATION/$PROJECT/$SUBDIR_MYSQLDUMP`: mysqldump result for current project
 >   - `/backups/mirror/default/default/mysqldump`
 
-Securebox backups whatever is your current task, at least for local process,
-works with the concept of `ORGANIZATION` and `PROJECT`. If you do not set one
-of these they will default to _default_.
+The default (yet configurable) name `files` is the mirrored rsync. The
+`mysqldump` name was used instead of mariadb/mysql because do exist tools like
+[mydumper](https://github.com/maxbube/mydumper) and they generate not the same
+output. So the `SUBDIR_*` is used to help with evolution over the years to mix
+different types of output and still be backwards compatible. Maybe even like 10
+or 20 years.
+
+##### Why we may choose to not make it even more configurable
+While you are free to make your own fork to fit better your needs and publish
+for the rest of the world, things that could over complicate the Ad Hoc usage
+(without configuration file) or (not really an priority, but may be pertinent)
+add too much extra code **and could not work by just adding an extra
+`SUBDIR_*`**, we may choose to not implement.
+
+Depending of how complex is some of your user cases, it may be pertinent to
+create two tasks. For example, our [Moodle](#moodle) driver is able to do full
+mirroring if both moodle (Application code) and moodledata (application
+"downloads", they are files on disk, not on database) if the layout is somewhat
+specific. If you try to use this project on a client that do not follow this
+pattern you may need to use one task to download only the moodle (Application
+code) and the database, and another task just do download the moodledata.
+
+##### Why we choose do archive entire folders, even if tools like mysqldump export single file
+To make things simpler tools who archive either locally or upload for a service
+like S3 will do the entire folder. This cut a lot of code and make easier to
+extend and also make easier to make recover more predictable at long term. This
+could even allow add some README.txt as part of the backup tool with extra
+instructions!
+
+Instead of change the behavior of this tool (even for a private fork) just
+because of this part consider the following: when recovering archived files
+just add an extra line on your script to uncompress the file from the folder.
 
 ## Installation
 
