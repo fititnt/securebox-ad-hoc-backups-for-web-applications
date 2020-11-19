@@ -7,6 +7,76 @@ shell script. Dedicated to Public Domain.
 
 **Quick usage**:
 
+`securebox-backup-download` is designed to **not** need configuration files,
+neither require root access or be installed on a remote host. If you can
+`ssh user@example.org`, you can do this:
+```bash
+SOURCE_HOST="user@example.org" securebox-backup-download
+# user@example.org:/var/www files are rsync'ed to /backups/mirror/default/default/files
+```
+
+One of the main advantages of `securebox-backup-download` over plain rsync is
+the smart discover of common web applications. On this example you don't need to
+specify the `SOURCE_MARIADB_DBNAME`, `SOURCE_MARIADB_USER` and
+`SOURCE_MARIADB_PASS`... and still works!
+
+```bash
+SOURCE_HOST="joomlauser@example.org" SOURCE_PATH="/var/www/joomla/" securebox-backup-download
+# example.org:/var/www/joomla are rsync'ed  to /backups/mirror/default/default/files
+# Database mentioned on /var/www/joomla/configuration.php will be at /backups/mirror/default/default/mysqldump/dbname.sql
+```
+
+See [Quickstart](#quickstart) to check if you like the idea. Then look at the
+[Installation](#installation).
+
+---
+
+**Table of Contents**
+
+<!-- TOC depthFrom:2 -->
+
+- [Usage](#usage)
+    - [Quickstart](#quickstart)
+        - [Minimal usage](#minimal-usage)
+        - [With configuration files](#with-configuration-files)
+    - [General idea of how it works](#general-idea-of-how-it-works)
+    - [Frequent Asked Questions](#frequent-asked-questions)
+        - [1. Timeouts on MariaDB/MySQL with very large database dumps](#1-timeouts-on-mariadbmysql-with-very-large-database-dumps)
+        - [2. '/tmp/databasedump.lock' lock issues / Why do I have to delete manually?](#2-tmpdatabasedumplock-lock-issues--why-do-i-have-to-delete-manually)
+- [Internals](#internals)
+    - [Supported web applications (for advanced automatic backup)](#supported-web-applications-for-advanced-automatic-backup)
+        - [Joomla](#joomla)
+        - [Laravel](#laravel)
+        - [Moodle](#moodle)
+    - [Strategies](#strategies)
+        - [Files management](#files-management)
+            - [rsync](#rsync)
+        - [Database management](#database-management)
+            - [MariaDB/MySQL - mysqldump](#mariadbmysql---mysqldump)
+    - [Extend Securebox Backups](#extend-securebox-backups)
+        - [Quickstart on how to add a new application (using as reference Joomla CMS)](#quickstart-on-how-to-add-a-new-application-using-as-reference-joomla-cms)
+- [Installation](#installation)
+    - [Android](#android)
+        - [Android installation with Termux](#android-installation-with-termux)
+    - [Linux](#linux)
+        - [Generic Linux Installation](#generic-linux-installation)
+        - [Tails installation](#tails-installation)
+    - [Windows](#windows)
+        - [Windows Subsystem for Linux installation](#windows-subsystem-for-linux-installation)
+- [License](#license)
+
+<!-- /TOC -->
+
+---
+
+## Usage
+
+### Quickstart
+
+#### Minimal usage
+
+**Quick usage**:
+
 securebox-backup-download is designed to **not** need configuration files,
 neither require root access or be installed on a remote host. If you can
 `ssh user@example.org`, you can do this:
@@ -30,7 +100,7 @@ SOURCE_HOST="joomlauser@example.org" SOURCE_PATH="/var/www/joomla/" securebox-ba
 # Database mentioned on /var/www/joomla/configuration.php will be at /backups/mirror/default/default/mysqldump/dbname.sql
 ```
 
-**With configuration files**
+#### With configuration files
 
 Again: **By _philosophical goals_ the Ad Hoc means somewhat the opposite** of
 the need to configure cron jobs, install extra software, etc just to make the backup
@@ -53,46 +123,98 @@ securebox-backup-download ./my-securebox-backup.conf
 # MariaDB/MySQL at /backups/mirror/university-acme/department-of-physics-prod/mysqldump/dbname.sql
 ```
 
----
+### General idea of how it works
 
-**Table of Contents**
+> This list os from the [v2.0 release](https://github.com/fititnt/securebox-ad-hoc-backups-for-web-applications/releases/tag/v2.0)
+  and still not updated to v3.0 new features.
 
-<!-- TOC depthFrom:2 -->
+- For each "backup job", assumes the concept of user defined 
+  - `ORGANIZATION` (default: `default`)
+  - `PROJECT`  (default: `default`)
+  - `SOURCE_HOST` (**required, show help if undefined**)
+  - `SOURCE_PATH` (default: `/var/www`)
+  - (other options omitted; these 4 are the most important, others can be auto
+    detected)
+- Mirror the remote project on local filesystem
+  - `LOCALMIRROR_BASEPATH` (default: `/backups/mirror`)
+    - This enviroment variable controls the base path for backup jobs
+  - Typical path `/backups/mirror/organization-a/project-b`
+    - `/backups/mirror/organization-a/project-b/files`
+      - Store rsync'ed files from remote project
+    - `/backups/mirror/organization-a/project-b/mysqldump`
+      - Store an mirrored copy, with 'mysqldump strategy', of remote project
+- Autodetect common CMS web applications
+  - **The web application configuration file is parsed, so if, for example
+    MariaDB/MySQL options are auto-discovered, the tool will atempt to also
+    mirror the database.**
+  - As v2.0 the only implemented is Joomla! CMS
+  - Wordpress and Moodle are drafted
+- Next backup jobs are faster, and optmized require only differential
+  transference of data from remote project to your local host.
+  - Note: this feature may depend on significant extra storage from your local
+    disk, in special for database dumps.
+    - You can decide to archive the mirrored database to save space, but this
+      is not the default behavior since rsync requires the uncompresed .sql
+      files
 
-- [Supported web applications (for advanced automatic backup)](#supported-web-applications-for-advanced-automatic-backup)
-    - [Joomla](#joomla)
-    - [Laravel](#laravel)
-    - [Moodle](#moodle)
-    - [_Your preferred web app_](#_your-preferred-web-app_)
-        - [Quickstart on how to add a new application (using as reference Joomla CMS)](#quickstart-on-how-to-add-a-new-application-using-as-reference-joomla-cms)
-        - [Similar app already have strategy I need](#similar-app-already-have-strategy-i-need)
-- [Already implemented features](#already-implemented-features)
-- [FAQ](#faq)
-    - [1. Timeouts on MariaDB/MySQL large database dumps](#1-timeouts-on-mariadbmysql-large-database-dumps)
-    - [2. '/tmp/databasedump.lock' lock issues / Why do I have to delete manually?](#2-tmpdatabasedumplock-lock-issues--why-do-i-have-to-delete-manually)
-- [License](#license)
+### Frequent Asked Questions
+> Note: most of the FAQ here cover issues that you could have even without using
+  the Securebox Ad Hoc Backups in special on new workstation. Since one of the
+  goals of this project is work even on Live Operational Systems (or people
+  who do not typicaly use CLI tools), we will mention them to save you time.
 
-<!-- /TOC -->
+#### 1. Timeouts on MariaDB/MySQL with very large database dumps
+> Quick fix: while running this tool, also open an additional SSH connection to
+your server. This keeps the connection alive without extra changes on your
+current workstation.
 
----
+When doing non-interactive _mysqldump strategy_ on a remote server is likely that for very large databases
+large databases this program may timeout. The [_DB.SE Will a mysql db import
+be interrupted if my ssh session times out?_](https://dba.stackexchange.com/questions/140565/will-a-mysql-db-import-be-interrupted-if-my-ssh-session-times-out) or the
+[How to Increase SSH Connection Timeout in Linux](https://www.tecmint.com/increase-ssh-connection-timeout/)
+may explain better this issue, but the proposed quick fix is likely to be an
+win-win
 
+_TODO: maybe we warn the user when we detect the error? This would reduce need
+to document this workaround (fititnt, 2020-11-16 05:16 UTC)_
 
-## Supported web applications (for advanced automatic backup)
+#### 2. '/tmp/databasedump.lock' lock issues / Why do I have to delete manually?
+> `MYSQLDUMP_EXCLUSIVELOCK=` (empty) change this intentional behavior
+
+The `/tmp/databasedump.lock` (MYSQLDUMP_TMPANDLOCKDIR) is both a temporary dir
+and a lock mechanism (it means you don't overload your server with multiple
+runs). It's intentional to require the user to manually delete instead of do it.
+
+This issue is likely to happen if you last attempt timeouted (see FAQ 1).
+
+## Internals
+
+### Supported web applications (for advanced automatic backup)
 
 Note: as v3.0 only files and MariaDB/MySQL databases are implemented on
 web applications auto detected. Other databases (like PostgreSQL)you know how to
 translate an `mysqldump` command to another tool, can be _easily_ added.
 
-### Joomla
+#### Joomla
 > Since v1.0
 
-### Laravel
+#### Laravel
 > Since v3.0
 
-### Moodle
+#### Moodle
 > Since 3.0
 
-### _Your preferred web app_
+### Strategies
+
+#### Files management
+
+##### rsync
+
+#### Database management
+
+##### MariaDB/MySQL - mysqldump
+
+### Extend Securebox Backups
 Since v1.0 this tool already supported backup of files. This alone can be at
 least half of the work you would need, even for unknown web applications.
 
@@ -142,7 +264,7 @@ If you are willing to test, you can give a sample of config file of your project
 and we may help you to implement.
 
 <!--
-#### Similar app already have strategy I need
+- #### Similar app already have strategy I need
 If some web application on this list already is know to backup an item your
 target 
 
@@ -154,64 +276,27 @@ scenario, it will not just detect how to automatically do extra steps, like
 dum
 -->
 
-## Already implemented features
+## Installation
 
-> This list os from the [v2.0 release](https://github.com/fititnt/securebox-ad-hoc-backups-for-web-applications/releases/tag/v2.0)
-  and still not updated to v3.0 new features.
+### Android
+#### Android installation with Termux
+- [Termux on Google Play](https://play.google.com/store/apps/details?id=com.termux&hl=pt_BR&gl=US)
 
-- For each "backup job", assumes the concept of user defined 
-  - `ORGANIZATION` (default: `default`)
-  - `PROJECT`  (default: `default`)
-  - `SOURCE_HOST` (**required, show help if undefined**)
-  - `SOURCE_PATH` (default: `/var/www`)
-  - (other options omitted; these 4 are the most important, others can be auto
-    detected)
-- Mirror the remote project on local filesystem
-  - `LOCALMIRROR_BASEPATH` (default: `/backups/mirror`)
-    - This enviroment variable controls the base path for backup jobs
-  - Typical path `/backups/mirror/organization-a/project-b`
-    - `/backups/mirror/organization-a/project-b/files`
-      - Store rsync'ed files from remote project
-    - `/backups/mirror/organization-a/project-b/mysqldump`
-      - Store an mirrored copy, with 'mysqldump strategy', of remote project
-- Autodetect common CMS web applications
-  - **The web application configuration file is parsed, so if, for example
-    MariaDB/MySQL options are auto-discovered, the tool will atempt to also
-    mirror the database.**
-  - As v2.0 the only implemented is Joomla! CMS
-  - Wordpress and Moodle are drafted
-- Next backup jobs are faster, and optmized require only differential
-  transference of data from remote project to your local host.
-  - Note: this feature may depend on significant extra storage from your local
-    disk, in special for database dumps.
-    - You can decide to archive the mirrored database to save space, but this
-      is not the default behavior since rsync requires the uncompresed .sql
-      files
+> TODO: document how to install on Termux (fititnt, 2020-11-19 05:04 UTC)
 
-## FAQ
-### 1. Timeouts on MariaDB/MySQL large database dumps
-> Quick fix: while running this tool, also open an additional SSH connection to
-your server. This keeps the connection alive without extra changes on your
-current workstation.
+### Linux
+#### Generic Linux Installation
 
-When doing non-interactive _mysqldump strategy_ on a remote server is likely that for very large databases
-large databases this program may timeout. The [_DB.SE Will a mysql db import
-be interrupted if my ssh session times out?_](https://dba.stackexchange.com/questions/140565/will-a-mysql-db-import-be-interrupted-if-my-ssh-session-times-out) or the
-[How to Increase SSH Connection Timeout in Linux](https://www.tecmint.com/increase-ssh-connection-timeout/)
-may explain better this issue, but the proposed quick fix is likely to be an
-win-win
+> TODO: document how to install on Generic Linux (fititnt, 2020-11-19 05:15 UTC)
 
-_TODO: maybe we warn the user when we detect the error? This would reduce need
-to document this workaround (fititnt, 2020-11-16 05:16 UTC)_
+#### Tails installation
 
-### 2. '/tmp/databasedump.lock' lock issues / Why do I have to delete manually?
-> `MYSQLDUMP_EXCLUSIVELOCK=` (empty) change this intentional behavior
+> TODO: document how to install on Tails (fititnt, 2020-11-19 05:15 UTC)
 
-The `/tmp/databasedump.lock` (MYSQLDUMP_TMPANDLOCKDIR) is both a temporary dir
-and a lock mechanism (it means you don't overload your server with multiple
-runs). It's intentional to require the user to manually delete instead of do it.
+### Windows
+#### Windows Subsystem for Linux installation
+- See [Windows Subsystem for Linux Installation Guide for Windows 10](https://docs.microsoft.com/windows/wsl/install-win10)
 
-This issue is likely to happen if you last attempt timeouted (see FAQ 1).
 
 ## License
 [![Public Domain](https://i.creativecommons.org/p/zero/1.0/88x31.png)](UNLICENSE)
