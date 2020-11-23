@@ -1,11 +1,11 @@
 #!/bin/sh
 #===============================================================================
 #
-#          FILE:  securebox-backup-archive-locally
+#          FILE:  securebox-backup-snapshot-locally
 #
-#         USAGE:  securebox-backup-archive-locally [options.conf]
+#         USAGE:  securebox-backup-snapshot-locally [options.conf]
 #
-#   DESCRIPTION:  securebox-backup-archive-locally IS AN DRAFT. Not tested
+#   DESCRIPTION:  securebox-backup-snapshot-locally IS AN DRAFT. Not tested
 #                 Read more at securebox-backups/backup-download-files.sh
 #
 #       OPTIONS:  ---
@@ -47,7 +47,7 @@ PROGRAM_NAME=$(basename "$0")
 #### securebox-backup-library.sh _______________________________________________
 # See securebox-backup-library.sh for common defaults.
 
-#### securebox-backup-archive-locally exclusive defaults _______________________
+#### securebox-backup-snapshot-locally exclusive defaults _______________________
 export SECUREBOX_BACKUP_ARCHIVE_LOCALLY_VERSION="1.0"
 
 DEFAULT__TIMESTAMP=$(date +'%FT%T')
@@ -64,7 +64,7 @@ DEFAULT__TIMESTAMP=$(date +'%FT%T')
 # order.
 
 #######################################
-# Show help for securebox-backup-archive-locally
+# Show help for securebox-backup-snapshot-locally
 # Globals:
 #   Several (read only)
 # Arguments:
@@ -75,7 +75,7 @@ DEFAULT__TIMESTAMP=$(date +'%FT%T')
 securebox_backup_archive_locally_help() {
   echo "
 $PROGRAM_NAME help
-  (TODO: add dedicated help for securebox-backup-archive-locally)
+  (TODO: add dedicated help for securebox-backup-snapshot-locally)
   
     Usage:
       $PROGRAM_NAME [ -h  | --help ]
@@ -238,7 +238,7 @@ securebox_backup_archive_locally_setdefaults()
 ################################  Functions, END ###############################
 ###############################  Main logic, START #############################
 
-echo "securebox-backup-archive-locally TODO:..."
+echo "securebox-backup-snapshot-locally TODO:..."
 
 # if ./securebox-backup.conf exist
 # If running this script with securebox-backup-download path/to/securebox-backup-options.conf

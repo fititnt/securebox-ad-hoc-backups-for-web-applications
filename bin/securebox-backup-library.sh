@@ -22,7 +22,20 @@
 #       VERSION:  v2.1
 #       CREATED:  2020-11-14 23:52 UTC Created. Based on securebox-backup-download v2.0
 #      REVISION:  2020-11-16 05:06 UTC Autodetect Moodle LMS configurations
+#                 2020-11-23 11:33 UTC v4.0 version bump. Code refactoring started.
+#                                      See GitHub GitHub & docs for details
 #===============================================================================
+export SECUREBOX_BACKUP_LIBRARY_VERSION="4.0.0"
+
+################# Example of user configurable variables, START ################
+# Maybe we dont use this
+
+
+# SECUREBOX_MIRROR="$SECUREBOX/mirror"
+# SECUREBOX_SNAPSHOTS="$SECUREBOX/snapshots"
+# SECUREBOX_TMP="$SECUREBOX/tmp"
+
+################# Example of user configurable variables, END ##################
 
 # TODO: document some tricks to workaround timeout issues when dumping large
 #       databases. https://www.tecmint.com/increase-ssh-connection-timeout/
@@ -47,7 +60,6 @@
 #       (fititnt, 2020-11-15 01:59 BRT)
 
 ################################  Defaults, START ##############################
-export SECUREBOX_BACKUP_LIBRARY_VERSION="2.1.1"
 
 #TIMESTAMP=$(date +'%FT%T')
 
@@ -64,6 +76,11 @@ export DEFAULT__SOURCE_PATH="/var/www"
 export DEFAULT__ORGANIZATION="default"
 export DEFAULT__PROJECT="default"
 export DEFAULT__WEBAPP_TYPE="generic" # This is autodetected. Do not need to change
+export DEFAULT__SECUREBOX="/backups"
+# SECUREBOX_MIRROR="$SECUREBOX/mirror"
+# SECUREBOX_SNAPSHOTS="$SECUREBOX/snapshots"
+# SECUREBOX_TMP="$SECUREBOX/tmp"
+
 export DEFAULT__LOCALMIRROR_BASEPATH="/backups/mirror"
 export DEFAULT__LOCALARCHIVES_BASEPATH="/backups/archives"
 export DEFAULT__LOCALTMP="/backups/tmp"
@@ -266,7 +283,8 @@ securebox_common_options_securebox_confs() {
   fi
 
   # Only check if file first argument is an file if is not an typical help argument
-  if [ "$_localvar_cliopt1" != " -h" ] &&
+  if [ "$_localvar_cliopt1" ] &&
+    [ "$_localvar_cliopt1" != "-h" ] &&
     [ "$_localvar_cliopt1" != "--help" ] &&
     [ "$_localvar_cliopt1" != "--help-bootstrap" ]; then
   

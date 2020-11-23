@@ -37,11 +37,14 @@
 #                 2020-11-14 04:02 UTC v2.0rc1 started refactoring and cleaning.
 #                                      Preparing to integrate with securebox-backup-archive
 #                 2020-11-14 10:14 UTC v2.0 code refactoring.
+#                 2020-11-23 11:33 UTC v4.0 version bump. Code refactoring started.
+#                                      See GitHub GitHub & docs for details
 #===============================================================================
+export SECUREBOX_BACKUP_DOWNLOAD_VERSION="4.0.0"
+
 PROGRAM_START_DATETIME=$(date +%s)
 PROGRAM_NAME=$(basename "$0")
 set -e
-
 
 ####################### securebox-backup-library.sh v2.0+ ######################
 # Place the securebox-backup-library.sh (non-executable) on the same path this
@@ -56,7 +59,7 @@ set -e
 # See securebox-backup-library.sh for common defaults.
 
 #### securebox-backup-download exclusive defaults ______________________________
-export SECUREBOX_BACKUP_DOWNLOAD_VERSION="2.0.1"
+# No exclusive defaults for securebox-backup-download yet.
 
 #################################  Defaults, END ###############################
 
