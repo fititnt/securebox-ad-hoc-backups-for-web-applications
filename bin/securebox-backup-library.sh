@@ -156,9 +156,9 @@ $PROGRAM_NAME (via securebox-backup-library.sh) --help-bootstrap
     sudo chown root:root /backups/mirror
 
     # LOCALARCHIVES_BASEPATH [$LOCALARCHIVES_BASEPATH]
-    sudo mkdir /backups/archives
-    sudo chmod 777 /backups/archives
-    sudo chown root:root /backups/archives
+    sudo mkdir /backups/snapshots
+    sudo chmod 777 /backups/snapshots
+    sudo chown root:root /backups/snapshots
 
   How securebox-backup-* will create subfolders (no need your intervention)?
     Will use the CREATE_LOCAL_FOLDERS_PERMISSIONS [$CREATE_LOCAL_FOLDERS_PERMISSIONS]
@@ -500,6 +500,12 @@ securebox_common_options_project_wordpress ()
 #######################################
 securebox_common_options_setdefaults()
 {
+
+  # auto detect better alternatives to DEFAULT__SECUREBOX="/backups"
+  if [ -z "$SECUREBOX" ]; then
+    securebox_common_options_setdefaults_base
+  fi
+
   ## About this project
   export ORGANIZATION="${ORGANIZATION:-$DEFAULT__ORGANIZATION}"
   export PROJECT="${PROJECT:-$DEFAULT__PROJECT}"
@@ -541,6 +547,82 @@ securebox_common_options_setdefaults()
   if [ -n "$DRYRUN" ]; then
     export DOWNLOAD_RSYNC_DRYRUN_STRING="--dry-run"
   fi
+}
+
+#######################################
+# This funcion try to smart detect better values for
+# DEFAULT__SECUREBOX="/backups" when the user already does not specificed
+# explicitly.
+# Globals:
+#   ...
+# Arguments:
+#   None
+# Returns:
+#   0 if success
+#   1 if error
+#######################################
+securebox_common_options_setdefaults_base()
+{
+
+  #### /mnt/backups
+  # /mnt/backups (explicitly mounted partitio or external storage) is assumed to
+  # always have priority while /backups is the lowerst one.
+  if [ -d "/mnt/backups" ]; then
+    export DEFAULT__SECUREBOX="/mnt/backups"
+    echo "DEFAULT__SECUREBOX $DEFAULT__SECUREBOX"
+    return 0
+  fi
+
+  #### ~/Persistent/backups
+  # @see https://tails.boum.org/doc/first_steps/persistence/configure/index.en.html
+  # Tails is an perfect operational system for an securebox as (when
+  # Persistence is enabled) you can have an USB stick already encrypted and
+  # the entire operational system is safer than boot on your own daily use
+  # OS. Since Tails will not persist ~/backups on reboot this will try to use
+  # the folder on your persistent storage. If you are using Live Tails and
+  # backuping to an external drive, please mount the /mnt/backups.
+  if [ -d "$HOME/Persistent/backups" ]; then
+    export DEFAULT__SECUREBOX="$HOME/Persistent/backups"
+    echo "DEFAULT__SECUREBOX $DEFAULT__SECUREBOX"
+    return 0
+  fi
+
+  #### ~/storage/external-1/backups
+  # @see https://wiki.termux.com/wiki/Internal_and_external_storage
+  # While external storage may be a bit less secure on Android (via Termux)
+  # than Termux internal storage this options if focused for cases were the user
+  # don't have sufficient internal space.
+  if [ -d "$HOME/storage/external-1/backups" ]; then
+    export DEFAULT__SECUREBOX="$HOME/storage/external-1/backups"
+    echo "DEFAULT__SECUREBOX $DEFAULT__SECUREBOX"
+    return 0
+  fi
+
+  #### ~/backups
+  # Subfolder on user home is likely to be 'more securebox' than /backups:
+  #   - Generic Linux: the user may using ecryptfs (plus maybe / full disk encryption)
+  #   - Android (via Termux): Android gives some protection from other apps
+  #       compared to use ~/storage/shared or ~/storage/downloads
+  #   - Tails: this is likely to be RAM or temporary storage. While is safe
+  #       the user should consider upload the result to some other place
+  if [ -d "$HOME/backups" ]; then
+    export DEFAULT__SECUREBOX="$HOME/backups"
+    echo "DEFAULT__SECUREBOX $DEFAULT__SECUREBOX"
+    return 0
+  fi
+
+  ### /backups
+  # This is our last try. Is likely to be mounted on local / (root) partition
+  # and not an removable media. It's an good idea you at least have
+  # full disk encryption or mount project folders only when working with them.
+  if [ -d "/backups" ]; then
+    export DEFAULT__SECUREBOX="/backups"
+    echo "DEFAULT__SECUREBOX $DEFAULT__SECUREBOX"
+    return 0
+  fi
+  echo "securebox_common_options_setdefaults_base:"
+  echo "WARNING: base not found. This may lead to errors. Allowing anyway..."
+  return 1
 }
 
 ################################  Functions, END ###############################
