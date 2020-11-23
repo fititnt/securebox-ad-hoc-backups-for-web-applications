@@ -76,17 +76,22 @@ export DEFAULT__SOURCE_PATH="/var/www"
 export DEFAULT__ORGANIZATION="default"
 export DEFAULT__PROJECT="default"
 export DEFAULT__WEBAPP_TYPE="generic" # This is autodetected. Do not need to change
+
+# @see securebox_common_options_setdefaults_base()
 export DEFAULT__SECUREBOX="/backups"
+# export DEFAULT__SECUREBOX_MIRROR="$SECUREBOX/mirror"
+# export DEFAULT__SECUREBOX_SNAPSHOTS="$SECUREBOX/snapshots"
+# export DEFAULT__SECUREBOX_TMP="$SECUREBOX/tmp"
 # SECUREBOX_MIRROR="$SECUREBOX/mirror"
 # SECUREBOX_SNAPSHOTS="$SECUREBOX/snapshots"
 # SECUREBOX_TMP="$SECUREBOX/tmp"
 
-export DEFAULT__LOCALMIRROR_BASEPATH="/backups/mirror"
-export DEFAULT__LOCALARCHIVES_BASEPATH="/backups/archives"
-export DEFAULT__LOCALTMP="/backups/tmp"
+# export DEFAULT__LOCALMIRROR_BASEPATH="/backups/mirror"
+# export DEFAULT__LOCALARCHIVES_BASEPATH="/backups/archives"
+# export DEFAULT__LOCALTMP="/backups/tmp"
 export DEFAULT__SUBDIR_FILES="files" # /backups/mirror/default/default/files/...
 export DEFAULT__SUBDIR_MYSQLDUMP="mysqldump" # /backups/mirror/default/default/mysqldump/dbname.sql
-# DEFAULT__LOCALMIRROR_THISPROJECT="$DEFAULT__LOCALMIRROR_BASEPATH/$DEFAULT__ORGANIZATION/$DEFAULT__PROJECT"
+# DEFAULT__LOCALMIRROR_THISPROJECT="$DEFAULT__SECUREBOX_MIRROR/$DEFAULT__ORGANIZATION/$DEFAULT__PROJECT"
 
 export DEFAULT__DOWNLOAD_RSYNC_EXCLUDES="--exclude='.well-known'"
 export DEFAULT__DOWNLOAD_RSYNC_EXTRAOPTIONS=""
@@ -99,7 +104,8 @@ export DEFAULT__MYSQLDUMP_EXCLUSIVELOCK="1"
 # This script will atempt to create some local paths if they already do not exist
 # You can define DEFAULT__SKIP_CREATE_LOCAL_FOLDERS=1 to create yourself
 export DEFAULT__SKIP_CREATE_LOCAL_FOLDERS=
-export DEFAULT__CREATE_LOCAL_FOLDERS_PERMISSIONS="0711"
+export DEFAULT__SECUREBOX_MKDIR_MODE="0711"
+# export DEFAULT__SECUREBOX_MKDIR_MODE="0711"
 
 export DEFAULT__SKIP_DOWNLOAD_RSYNC
 
@@ -150,7 +156,7 @@ $PROGRAM_NAME (via securebox-backup-library.sh) --help-bootstrap
     sudo chmod 777 /backups/tmp
     sudo chown root:root /backups/tmp
 
-    # LOCALMIRROR_BASEPATH [$LOCALMIRROR_BASEPATH]
+    # SECUREBOX_MIRROR [$SECUREBOX_MIRROR]
     sudo mkdir /backups/mirror
     sudo chmod 777 /backups/mirror
     sudo chown root:root /backups/mirror
@@ -188,11 +194,11 @@ securebox_common_debug()
   printf "\nGeneral\n"
   echo "  ORGANIZATION: $ORGANIZATION"
   echo "  PROJECT: $PROJECT"
-  # echo "LOCALTMP: $LOCALTMP"
-  # echo "LOCALMIRROR_BASEPATH: $LOCALMIRROR_BASEPATH"
-  # echo "LOCALMIRROR_BASEPATH: $LOCALMIRROR_BASEPATH"
-  echo "  LOCALMIRROR_THISPROJECT: $LOCALMIRROR_THISPROJECT"
-  echo "  LOCALARCHIVES_THISPROJECT: $LOCALARCHIVES_THISPROJECT"
+  echo "  SECUREBOX: $SECUREBOX"
+  echo "    SECUREBOX_MIRROR: $SECUREBOX_MIRROR"
+  echo "      SECUREBOX_ACTIVE_MIRROR: $SECUREBOX_ACTIVE_MIRROR"
+  echo "    SECUREBOX_SNAPSHOTS: $SECUREBOX_SNAPSHOTS"
+  echo "      SECUREBOX_ACTIVE_SNAPSHOTS: $SECUREBOX_ACTIVE_SNAPSHOTS"
   # echo "SUBDIR_FILES: $SUBDIR_FILES"
   # echo "SUBDIR_MYSQLDUMP: $SUBDIR_MYSQLDUMP"
 
@@ -223,10 +229,10 @@ securebox_common_debug()
   echo "  SKIP_WEBAPP_TYPE_AUTODETECTION: $DOWNLOAD_RSYNC_EXCLUDES"
   echo "  DOWNLOAD_RSYNC_EXCLUDES: $DOWNLOAD_RSYNC_EXCLUDES"
   echo "  DOWNLOAD_RSYNC_EXTRAOPTIONS: $DOWNLOAD_RSYNC_EXTRAOPTIONS"
-  echo "  LOCALMIRROR_BASEPATH: $LOCALMIRROR_BASEPATH"
+  echo "  SECUREBOX_MIRROR: $SECUREBOX_MIRROR"
   echo "  LOCALMIRROR_THISPROJECT: $LOCALMIRROR_THISPROJECT"
 
-  echo $_local_versions
+  # echo $_local_versions
 
   # echo "MYSQLDUMP_TMPANDLOCKDIR: $MYSQLDUMP_TMPANDLOCKDIR"
   # printf "========== securebox_common_debug, end ==========\n"
@@ -511,11 +517,14 @@ securebox_common_options_setdefaults()
   export PROJECT="${PROJECT:-$DEFAULT__PROJECT}"
   export WEBAPP_TYPE="${WEBAPP_TYPE:-$DEFAULT__WEBAPP_TYPE}"
   export LOCALTMP="${LOCALTMP:-$DEFAULT__LOCALTMP}"
-  export LOCALMIRROR_BASEPATH="${LOCALMIRROR_BASEPATH:-$DEFAULT__LOCALMIRROR_BASEPATH}"
-  #export  DEFAULT__LOCALMIRROR_THISPROJECT="$DEFAULT__LOCALMIRROR_BASEPATH/$DEFAULT__ORGANIZATION/$DEFAULT__PROJECT"
-  export LOCALMIRROR_THISPROJECT="${LOCALMIRROR_THISPROJECT:-$LOCALMIRROR_BASEPATH/$ORGANIZATION/$PROJECT}"
-  export LOCALARCHIVES_BASEPATH="${LOCALARCHIVES_BASEPATH:-$DEFAULT__LOCALARCHIVES_BASEPATH}"
-  export LOCALARCHIVES_THISPROJECT="${LOCALARCHIVES_THISPROJECT:-$LOCALARCHIVES_BASEPATH/$ORGANIZATION/$PROJECT}"
+  export SECUREBOX_MIRROR="${SECUREBOX_MIRROR:-$SECUREBOX/mirror}"
+  export SECUREBOX_ACTIVE_MIRROR="${SECUREBOX_ACTIVE_MIRROR:-$SECUREBOX_MIRROR/$ORGANIZATION/$PROJECT}"
+  export SECUREBOX_SNAPSHOTS="${SECUREBOX_SNAPSHOTS:-$SECUREBOX/snapshots}"
+  export SECUREBOX_ACTIVE_SNAPSHOTS="${SECUREBOX_ACTIVE_SNAPSHOTS:-$SECUREBOX_SNAPSHOTS/$ORGANIZATION/$PROJECT}"
+  #export  DEFAULT__LOCALMIRROR_THISPROJECT="$DEFAULT__SECUREBOX_MIRROR/$DEFAULT__ORGANIZATION/$DEFAULT__PROJECT"
+  # export LOCALMIRROR_THISPROJECT="${LOCALMIRROR_THISPROJECT:-$SECUREBOX_MIRROR/$ORGANIZATION/$PROJECT}"
+  # export LOCALARCHIVES_BASEPATH="${LOCALARCHIVES_BASEPATH:-$DEFAULT__LOCALARCHIVES_BASEPATH}"
+  # export LOCALARCHIVES_THISPROJECT="${LOCALARCHIVES_THISPROJECT:-$LOCALARCHIVES_BASEPATH/$ORGANIZATION/$PROJECT}"
   export SUBDIR_FILES="${SUBDIR_FILES:-$DEFAULT__SUBDIR_FILES}"
   export SUBDIR_MYSQLDUMP="${SUBDIR_MYSQLDUMP:-$DEFAULT__SUBDIR_MYSQLDUMP}"
 
@@ -537,7 +546,7 @@ securebox_common_options_setdefaults()
   # Other
   export SKIP_DOWNLOAD_RSYNC="${SKIP_DOWNLOAD_RSYNC:-$DEFAULT__SKIP_DOWNLOAD_RSYNC}"
   export SKIP_CREATE_LOCAL_FOLDERS="${SKIP_CREATE_LOCAL_FOLDERS:-$DEFAULT__SKIP_CREATE_LOCAL_FOLDERS}"
-  export CREATE_LOCAL_FOLDERS_PERMISSIONS="${CREATE_LOCAL_FOLDERS_PERMISSIONS:-$DEFAULT__CREATE_LOCAL_FOLDERS_PERMISSIONS}"
+  export SECUREBOX_MKDIR_MODE="${SECUREBOX_MKDIR_MODE:-$DEFAULT__SECUREBOX_MKDIR_MODE}"
   export SKIP_MYSQLDUMP="${SKIP_MYSQLDUMP:-$DEFAULT__SKIP_MYSQLDUMP}"
   export SKIP_WEBAPP_TYPE_AUTODETECTION="${SKIP_WEBAPP_TYPE_AUTODETECTION:-$DEFAULT__SKIP_WEBAPP_TYPE_AUTODETECTION}"
   export SKIP_CHECK_DONT_RUN_AS_ROOT_LOCALLY="${SKIP_CHECK_DONT_RUN_AS_ROOT_LOCALLY:-$DEFAULT__SKIP_CHECK_DONT_RUN_AS_ROOT_LOCALLY}"
@@ -569,12 +578,11 @@ securebox_common_options_setdefaults_base()
   # always have priority while /backups is the lowerst one.
   if [ -d "/mnt/backups" ]; then
     export DEFAULT__SECUREBOX="/mnt/backups"
-    echo "DEFAULT__SECUREBOX $DEFAULT__SECUREBOX"
+    # echo "DEFAULT__SECUREBOX $DEFAULT__SECUREBOX"
     return 0
   fi
 
   #### ~/Persistent/backups
-  # @see https://tails.boum.org/doc/first_steps/persistence/configure/index.en.html
   # Tails is an perfect operational system for an securebox as (when
   # Persistence is enabled) you can have an USB stick already encrypted and
   # the entire operational system is safer than boot on your own daily use
@@ -583,7 +591,7 @@ securebox_common_options_setdefaults_base()
   # backuping to an external drive, please mount the /mnt/backups.
   if [ -d "$HOME/Persistent/backups" ]; then
     export DEFAULT__SECUREBOX="$HOME/Persistent/backups"
-    echo "DEFAULT__SECUREBOX $DEFAULT__SECUREBOX"
+    # echo "DEFAULT__SECUREBOX $DEFAULT__SECUREBOX"
     return 0
   fi
 
@@ -594,7 +602,7 @@ securebox_common_options_setdefaults_base()
   # don't have sufficient internal space.
   if [ -d "$HOME/storage/external-1/backups" ]; then
     export DEFAULT__SECUREBOX="$HOME/storage/external-1/backups"
-    echo "DEFAULT__SECUREBOX $DEFAULT__SECUREBOX"
+    # echo "DEFAULT__SECUREBOX $DEFAULT__SECUREBOX"
     return 0
   fi
 
@@ -607,7 +615,7 @@ securebox_common_options_setdefaults_base()
   #       the user should consider upload the result to some other place
   if [ -d "$HOME/backups" ]; then
     export DEFAULT__SECUREBOX="$HOME/backups"
-    echo "DEFAULT__SECUREBOX $DEFAULT__SECUREBOX"
+    # echo "DEFAULT__SECUREBOX $DEFAULT__SECUREBOX"
     return 0
   fi
 
@@ -617,7 +625,7 @@ securebox_common_options_setdefaults_base()
   # full disk encryption or mount project folders only when working with them.
   if [ -d "/backups" ]; then
     export DEFAULT__SECUREBOX="/backups"
-    echo "DEFAULT__SECUREBOX $DEFAULT__SECUREBOX"
+    # echo "DEFAULT__SECUREBOX $DEFAULT__SECUREBOX"
     return 0
   fi
   echo "securebox_common_options_setdefaults_base:"

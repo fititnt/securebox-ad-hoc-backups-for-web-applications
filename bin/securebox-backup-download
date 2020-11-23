@@ -107,9 +107,9 @@ $PROGRAM_NAME help
 
       Minimal usage (without configuration files):
         SOURCE_HOST=user@example.org $PROGRAM_NAME
-          Download user@example.org:$SOURCE_PATH to $LOCALMIRROR_THISPROJECT/{$SUBDIR_FILES,$SUBDIR_MYSQLDUMP}
+          Download user@example.org:$SOURCE_PATH to $SECUREBOX_ACTIVE_MIRROR/{$SUBDIR_FILES,$SUBDIR_MYSQLDUMP}
         SOURCE_HOST=user@example.org SOURCE_PATH=/var/www/wordpress $PROGRAM_NAME
-          Download user@example.org:/var/www/wordpress to $LOCALMIRROR_THISPROJECT/{$SUBDIR_FILES,$SUBDIR_MYSQLDUMP}
+          Download user@example.org:/var/www/wordpress to $SECUREBOX_ACTIVE_MIRROR/{$SUBDIR_FILES,$SUBDIR_MYSQLDUMP}
 
       Typical ad-hoc usage (assumes you have configuration file):
         DEBUG=1 $PROGRAM_NAME ./path/to/custom/securebox-backup.conf 
@@ -172,31 +172,31 @@ securebox_backup_download_execute_create_local_folders()
     return 0
   fi
 
-  if [ ! -w "${LOCALMIRROR_BASEPATH}" ]; then
-    echo "ERROR!: LOCALMIRROR_BASEPATH [$LOCALMIRROR_BASEPATH] not writable"
+  if [ ! -w "${SECUREBOX_MIRROR}" ]; then
+    echo "ERROR!: SECUREBOX_MIRROR [$SECUREBOX_MIRROR] not writable"
     echo "Is the current filesystem boostraped? See help with "
     echo "  $PROGRAM_NAME --help-bootstrap"
     echo "Aborting!"
     exit 2
   fi
 
-  if [ ! -d "${LOCALMIRROR_BASEPATH}/${ORGANIZATION}" ]; then
-    echo "INFO: ${LOCALMIRROR_BASEPATH}/${ORGANIZATION} does not exist. Creating now..."
-    mkdir --mode "${CREATE_LOCAL_FOLDERS_PERMISSIONS}" "${LOCALMIRROR_BASEPATH}/${ORGANIZATION}"
+  if [ ! -d "${SECUREBOX_MIRROR}/${ORGANIZATION}" ]; then
+    echo "INFO: ${SECUREBOX_MIRROR}/${ORGANIZATION} does not exist. Creating now..."
+    mkdir --mode "${SECUREBOX_MKDIR_MODE}" "${SECUREBOX_MIRROR}/${ORGANIZATION}"
   fi
-  if [ ! -d "${LOCALMIRROR_BASEPATH}/${ORGANIZATION}/${PROJECT}" ]; then
-    echo "INFO: ${LOCALMIRROR_BASEPATH}/${ORGANIZATION}/${PROJECT} does not exist. Creating now..."
-    mkdir --mode "${CREATE_LOCAL_FOLDERS_PERMISSIONS}" "${LOCALMIRROR_BASEPATH}/${ORGANIZATION}/${PROJECT}"
-  fi
-
-  if [ ! -d "${LOCALMIRROR_THISPROJECT}/${SUBDIR_FILES}" ]; then
-    echo "INFO: ${LOCALMIRROR_THISPROJECT}/${SUBDIR_FILES} does not exist. Creating now..."
-    mkdir --mode "${CREATE_LOCAL_FOLDERS_PERMISSIONS}" "${LOCALMIRROR_THISPROJECT}/${SUBDIR_FILES}"
+  if [ ! -d "${SECUREBOX_MIRROR}/${ORGANIZATION}/${PROJECT}" ]; then
+    echo "INFO: ${SECUREBOX_MIRROR}/${ORGANIZATION}/${PROJECT} does not exist. Creating now..."
+    mkdir --mode "${SECUREBOX_MKDIR_MODE}" "${SECUREBOX_MIRROR}/${ORGANIZATION}/${PROJECT}"
   fi
 
-  if [ ! -d "${LOCALMIRROR_THISPROJECT}/${SUBDIR_MYSQLDUMP}" ]; then
-    echo "INFO: ${LOCALMIRROR_THISPROJECT}/${SUBDIR_MYSQLDUMP} does not exist. Creating now..."
-    mkdir --mode "${CREATE_LOCAL_FOLDERS_PERMISSIONS}" "${LOCALMIRROR_THISPROJECT}/${SUBDIR_MYSQLDUMP}"
+  if [ ! -d "${SECUREBOX_ACTIVE_MIRROR}/${SUBDIR_FILES}" ]; then
+    echo "INFO: ${SECUREBOX_ACTIVE_MIRROR}/${SUBDIR_FILES} does not exist. Creating now..."
+    mkdir --mode "${SECUREBOX_MKDIR_MODE}" "${SECUREBOX_ACTIVE_MIRROR}/${SUBDIR_FILES}"
+  fi
+
+  if [ ! -d "${SECUREBOX_ACTIVE_MIRROR}/${SUBDIR_MYSQLDUMP}" ]; then
+    echo "INFO: ${SECUREBOX_ACTIVE_MIRROR}/${SUBDIR_MYSQLDUMP} does not exist. Creating now..."
+    mkdir --mode "${SECUREBOX_MKDIR_MODE}" "${SECUREBOX_ACTIVE_MIRROR}/${SUBDIR_MYSQLDUMP}"
   fi
 }
 
@@ -242,8 +242,8 @@ securebox_backup_download_execute_database_mydumper() {
 securebox_backup_download_execute_database_mysqldump()
 {
 
-  # export LOCALMIRROR_MYSQLDUMP_SQLFILE="$LOCALMIRROR_THISPROJECT/$SUBDIR_MYSQLDUMP/$SOURCE_MARIADB_DBNAME.sql"
-  LOCALMIRROR_MYSQLDUMP_SQLFILE="$LOCALMIRROR_THISPROJECT/$SUBDIR_MYSQLDUMP/$SOURCE_MARIADB_DBNAME.sql"
+  # export LOCALMIRROR_MYSQLDUMP_SQLFILE="$SECUREBOX_ACTIVE_MIRROR/$SUBDIR_MYSQLDUMP/$SOURCE_MARIADB_DBNAME.sql"
+  LOCALMIRROR_MYSQLDUMP_SQLFILE="$SECUREBOX_ACTIVE_MIRROR/$SUBDIR_MYSQLDUMP/$SOURCE_MARIADB_DBNAME.sql"
 
   # This folder servers both as temporary file and as locking system
   # @see http://mywiki.wooledge.org/BashFAQ/050
@@ -298,8 +298,8 @@ securebox_backup_download_execute_database_mysqldump()
 #######################################
 securebox_backup_download_execute_files_rsync()
 {
-  #export LOCALMIRROR_FILES_PATH="${LOCALMIRROR_THISPROJECT}/${SUBDIR_FILES}"
-  LOCALMIRROR_FILES_PATH="${LOCALMIRROR_THISPROJECT}/${SUBDIR_FILES}"
+  #export LOCALMIRROR_FILES_PATH="${SECUREBOX_ACTIVE_MIRROR}/${SUBDIR_FILES}"
+  LOCALMIRROR_FILES_PATH="${SECUREBOX_ACTIVE_MIRROR}/${SUBDIR_FILES}"
 
   # NOTE on the 'shellcheck disable=SC2086':
   #  Both $DOWNLOAD_RSYNC_EXCLUDES and $RSYNC_EXTRAOPTIONS need to be
@@ -337,8 +337,8 @@ securebox_backup_download_execute_files_rsync()
 securebox_backup_download_results() {
   echo ""
   echo "$PROGRAM_NAME finished."
-  echo "Your mirrored data is at $LOCALMIRROR_THISPROJECT"
-  du --human-readable --max-depth=1 $LOCALMIRROR_THISPROJECT
+  echo "Your mirrored data is at $SECUREBOX_ACTIVE_MIRROR"
+  du --human-readable --max-depth=1 $SECUREBOX_ACTIVE_MIRROR
   echo ""
 }
 
