@@ -79,19 +79,6 @@ export DEFAULT__WEBAPP_TYPE="generic" # This is autodetected. Do not need to cha
 
 # @see securebox_common_options_setdefaults_base()
 export DEFAULT__SECUREBOX="/backups"
-# export DEFAULT__SECUREBOX_MIRROR="$SECUREBOX/mirror"
-# export DEFAULT__SECUREBOX_SNAPSHOTS="$SECUREBOX/snapshots"
-# export DEFAULT__SECUREBOX_TMP="$SECUREBOX/tmp"
-# SECUREBOX_MIRROR="$SECUREBOX/mirror"
-# SECUREBOX_SNAPSHOTS="$SECUREBOX/snapshots"
-# SECUREBOX_TMP="$SECUREBOX/tmp"
-
-# export DEFAULT__LOCALMIRROR_BASEPATH="/backups/mirror"
-# export DEFAULT__LOCALARCHIVES_BASEPATH="/backups/archives"
-# export DEFAULT__LOCALTMP="/backups/tmp"
-# export DEFAULT__SUBDIR_FILES="files" # /backups/mirror/default/default/files/...
-# export DEFAULT__SUBDIR_MYSQLDUMP="mysqldump" # /backups/mirror/default/default/mysqldump/dbname.sql
-# DEFAULT__LOCALMIRROR_THISPROJECT="$DEFAULT__SECUREBOX_MIRROR/$DEFAULT__ORGANIZATION/$DEFAULT__PROJECT"
 
 export DEFAULT__DOWNLOAD_RSYNC_EXCLUDES="--exclude='.well-known'"
 export DEFAULT__DOWNLOAD_RSYNC_EXTRAOPTIONS=""
@@ -161,20 +148,19 @@ $PROGRAM_NAME (via securebox-backup-library.sh) --help-bootstrap
     sudo chmod 777 /backups/mirror
     sudo chown root:root /backups/mirror
 
-    # LOCALARCHIVES_BASEPATH [$LOCALARCHIVES_BASEPATH]
+    # SECUREBOX_SNAPSHOTS [$SECUREBOX_SNAPSHOTS]
     sudo mkdir /backups/snapshots
     sudo chmod 777 /backups/snapshots
     sudo chown root:root /backups/snapshots
 
   How securebox-backup-* will create subfolders (no need your intervention)?
-    Will use the CREATE_LOCAL_FOLDERS_PERMISSIONS [$CREATE_LOCAL_FOLDERS_PERMISSIONS]
-      mkdir --mode=$CREATE_LOCAL_FOLDERS_PERMISSIONS (...)/org/project/(...)
+    Will use the SECUREBOX_MKDIR_MODE [$SECUREBOX_MKDIR_MODE]
+      mkdir --mode=$SECUREBOX_MKDIR_MODE (...)/org/project/(...)
     The owner will be the (preferable) non-root user you use to run
 
   Note: you can use an different strategy.
     "
 }
-
 
 #######################################
 # Show all internal options at the moment
@@ -525,12 +511,6 @@ securebox_common_options_setdefaults()
   export SECUREBOX_SNAPSHOTS_NOW="${SECUREBOX_SNAPSHOTS_NOW:-$SECUREBOX_SNAPSHOTS/$ORGANIZATION/$PROJECT}"
   export SECUREBOX_SNAPSHOTS_NOW_DRIVER_FILES="${SECUREBOX_SNAPSHOTS_NOW}/files"
   export SECUREBOX_SNAPSHOTS_NOW_DRIVER_MYSQLDUMP="${SECUREBOX_SNAPSHOTS_NOW}/mysqldump"
-  #export  DEFAULT__LOCALMIRROR_THISPROJECT="$DEFAULT__SECUREBOX_MIRROR/$DEFAULT__ORGANIZATION/$DEFAULT__PROJECT"
-  # export LOCALMIRROR_THISPROJECT="${LOCALMIRROR_THISPROJECT:-$SECUREBOX_MIRROR/$ORGANIZATION/$PROJECT}"
-  # export LOCALARCHIVES_BASEPATH="${LOCALARCHIVES_BASEPATH:-$DEFAULT__LOCALARCHIVES_BASEPATH}"
-  # export LOCALARCHIVES_THISPROJECT="${LOCALARCHIVES_THISPROJECT:-$LOCALARCHIVES_BASEPATH/$ORGANIZATION/$PROJECT}"
-  # export SUBDIR_FILES="${SUBDIR_FILES:-$DEFAULT__SUBDIR_FILES}"
-  # export SUBDIR_MYSQLDUMP="${SUBDIR_MYSQLDUMP:-$DEFAULT__SUBDIR_MYSQLDUMP}"
 
   ## About source
   export SOURCE_HOST="${SOURCE_HOST:-$DEFAULT__SOURCE_HOST}"
