@@ -89,8 +89,8 @@ export DEFAULT__SECUREBOX="/backups"
 # export DEFAULT__LOCALMIRROR_BASEPATH="/backups/mirror"
 # export DEFAULT__LOCALARCHIVES_BASEPATH="/backups/archives"
 # export DEFAULT__LOCALTMP="/backups/tmp"
-export DEFAULT__SUBDIR_FILES="files" # /backups/mirror/default/default/files/...
-export DEFAULT__SUBDIR_MYSQLDUMP="mysqldump" # /backups/mirror/default/default/mysqldump/dbname.sql
+# export DEFAULT__SUBDIR_FILES="files" # /backups/mirror/default/default/files/...
+# export DEFAULT__SUBDIR_MYSQLDUMP="mysqldump" # /backups/mirror/default/default/mysqldump/dbname.sql
 # DEFAULT__LOCALMIRROR_THISPROJECT="$DEFAULT__SECUREBOX_MIRROR/$DEFAULT__ORGANIZATION/$DEFAULT__PROJECT"
 
 export DEFAULT__DOWNLOAD_RSYNC_EXCLUDES="--exclude='.well-known'"
@@ -188,17 +188,17 @@ $PROGRAM_NAME (via securebox-backup-library.sh) --help-bootstrap
 securebox_common_debug()
 {
 
-  _local_versions=$(env | grep '^SECUREBOX')
+  _local_versions=$(env | sort | grep '^SECUREBOX')
 
   # printf "========== securebox_common_debug, start ==========\n"
   printf "\nGeneral\n"
   echo "  ORGANIZATION: $ORGANIZATION"
   echo "  PROJECT: $PROJECT"
   echo "  SECUREBOX: $SECUREBOX"
-  echo "    SECUREBOX_MIRROR: $SECUREBOX_MIRROR"
-  echo "      SECUREBOX_ACTIVE_MIRROR: $SECUREBOX_ACTIVE_MIRROR"
-  echo "    SECUREBOX_SNAPSHOTS: $SECUREBOX_SNAPSHOTS"
-  echo "      SECUREBOX_ACTIVE_SNAPSHOTS: $SECUREBOX_ACTIVE_SNAPSHOTS"
+  #echo "    SECUREBOX_MIRROR: $SECUREBOX_MIRROR"
+  #echo "      SECUREBOX_MIRROR_NOW: $SECUREBOX_MIRROR_NOW"
+  #echo "    SECUREBOX_SNAPSHOTS: $SECUREBOX_SNAPSHOTS"
+  #echo "      SECUREBOX_SNAPSHOTS_NOW: $SECUREBOX_SNAPSHOTS_NOW"
   # echo "SUBDIR_FILES: $SUBDIR_FILES"
   # echo "SUBDIR_MYSQLDUMP: $SUBDIR_MYSQLDUMP"
 
@@ -229,10 +229,10 @@ securebox_common_debug()
   echo "  SKIP_WEBAPP_TYPE_AUTODETECTION: $DOWNLOAD_RSYNC_EXCLUDES"
   echo "  DOWNLOAD_RSYNC_EXCLUDES: $DOWNLOAD_RSYNC_EXCLUDES"
   echo "  DOWNLOAD_RSYNC_EXTRAOPTIONS: $DOWNLOAD_RSYNC_EXTRAOPTIONS"
-  echo "  SECUREBOX_MIRROR: $SECUREBOX_MIRROR"
-  echo "  LOCALMIRROR_THISPROJECT: $LOCALMIRROR_THISPROJECT"
+  #echo "  SECUREBOX_MIRROR: $SECUREBOX_MIRROR"
+  #echo "  LOCALMIRROR_THISPROJECT: $LOCALMIRROR_THISPROJECT"
 
-  # echo $_local_versions
+  echo "$_local_versions"
 
   # echo "MYSQLDUMP_TMPANDLOCKDIR: $MYSQLDUMP_TMPANDLOCKDIR"
   # printf "========== securebox_common_debug, end ==========\n"
@@ -332,7 +332,7 @@ securebox_common_options_securebox_confs() {
 securebox_common_options_project ()
 {
   # POSIX does support local keywork.
-  _local_root="$LOCALMIRROR_THISPROJECT/$SUBDIR_FILES"
+  _local_root="$SECUREBOX_MIRROR_NOW/$SUBDIR_FILES"
 
 
   # Joomla?
@@ -518,15 +518,19 @@ securebox_common_options_setdefaults()
   export WEBAPP_TYPE="${WEBAPP_TYPE:-$DEFAULT__WEBAPP_TYPE}"
   export LOCALTMP="${LOCALTMP:-$DEFAULT__LOCALTMP}"
   export SECUREBOX_MIRROR="${SECUREBOX_MIRROR:-$SECUREBOX/mirror}"
-  export SECUREBOX_ACTIVE_MIRROR="${SECUREBOX_ACTIVE_MIRROR:-$SECUREBOX_MIRROR/$ORGANIZATION/$PROJECT}"
+  export SECUREBOX_MIRROR_NOW="${SECUREBOX_MIRROR_NOW:-$SECUREBOX_MIRROR/$ORGANIZATION/$PROJECT}"
+  export SECUREBOX_MIRROR_NOW_DRIVER_FILES="${SECUREBOX_MIRROR_NOW}/files"
+  export SECUREBOX_MIRROR_NOW_DRIVER_MYSQLDUMP="${SECUREBOX_MIRROR_NOW}/mysqldump"
   export SECUREBOX_SNAPSHOTS="${SECUREBOX_SNAPSHOTS:-$SECUREBOX/snapshots}"
-  export SECUREBOX_ACTIVE_SNAPSHOTS="${SECUREBOX_ACTIVE_SNAPSHOTS:-$SECUREBOX_SNAPSHOTS/$ORGANIZATION/$PROJECT}"
+  export SECUREBOX_SNAPSHOTS_NOW="${SECUREBOX_SNAPSHOTS_NOW:-$SECUREBOX_SNAPSHOTS/$ORGANIZATION/$PROJECT}"
+  export SECUREBOX_SNAPSHOTS_NOW_DRIVER_FILES="${SECUREBOX_SNAPSHOTS_NOW}/files"
+  export SECUREBOX_SNAPSHOTS_NOW_DRIVER_MYSQLDUMP="${SECUREBOX_SNAPSHOTS_NOW}/mysqldump"
   #export  DEFAULT__LOCALMIRROR_THISPROJECT="$DEFAULT__SECUREBOX_MIRROR/$DEFAULT__ORGANIZATION/$DEFAULT__PROJECT"
   # export LOCALMIRROR_THISPROJECT="${LOCALMIRROR_THISPROJECT:-$SECUREBOX_MIRROR/$ORGANIZATION/$PROJECT}"
   # export LOCALARCHIVES_BASEPATH="${LOCALARCHIVES_BASEPATH:-$DEFAULT__LOCALARCHIVES_BASEPATH}"
   # export LOCALARCHIVES_THISPROJECT="${LOCALARCHIVES_THISPROJECT:-$LOCALARCHIVES_BASEPATH/$ORGANIZATION/$PROJECT}"
-  export SUBDIR_FILES="${SUBDIR_FILES:-$DEFAULT__SUBDIR_FILES}"
-  export SUBDIR_MYSQLDUMP="${SUBDIR_MYSQLDUMP:-$DEFAULT__SUBDIR_MYSQLDUMP}"
+  # export SUBDIR_FILES="${SUBDIR_FILES:-$DEFAULT__SUBDIR_FILES}"
+  # export SUBDIR_MYSQLDUMP="${SUBDIR_MYSQLDUMP:-$DEFAULT__SUBDIR_MYSQLDUMP}"
 
   ## About source
   export SOURCE_HOST="${SOURCE_HOST:-$DEFAULT__SOURCE_HOST}"
@@ -556,6 +560,23 @@ securebox_common_options_setdefaults()
   if [ -n "$DRYRUN" ]; then
     export DOWNLOAD_RSYNC_DRYRUN_STRING="--dry-run"
   fi
+
+  # To avoid user need to use DEBUG=1, we will print at least basic information
+  # TODO: move to a dedicated function (fititnt, 2020-11-23 16:08 UTC)
+  echo ""
+  echo "ORGANIZATION: $ORGANIZATION"
+  echo "PROJECT: $PROJECT"
+  echo "SECUREBOX: $SECUREBOX"
+  echo "SECUREBOX_MIRROR_NOW: $SECUREBOX_MIRROR_NOW"
+
+  if [ "$SECUREBOX_TASKNAME" = "securebox-backup-snapshot-locally" ]; then
+    echo "SECUREBOX_SNAPSHOTS_NOW: $SECUREBOX_SNAPSHOTS_NOW"
+  fi
+
+  echo ""
+  echo "SOURCE_HOST: $SOURCE_HOST"
+  echo "SOURCE_PATH: $SOURCE_PATH"
+  echo ""
 }
 
 #######################################
@@ -577,8 +598,8 @@ securebox_common_options_setdefaults_base()
   # /mnt/backups (explicitly mounted partitio or external storage) is assumed to
   # always have priority while /backups is the lowerst one.
   if [ -d "/mnt/backups" ]; then
-    export DEFAULT__SECUREBOX="/mnt/backups"
-    # echo "DEFAULT__SECUREBOX $DEFAULT__SECUREBOX"
+    export SECUREBOX="/mnt/backups"
+    # echo "SECUREBOX $SECUREBOX"
     return 0
   fi
 
@@ -590,8 +611,8 @@ securebox_common_options_setdefaults_base()
   # the folder on your persistent storage. If you are using Live Tails and
   # backuping to an external drive, please mount the /mnt/backups.
   if [ -d "$HOME/Persistent/backups" ]; then
-    export DEFAULT__SECUREBOX="$HOME/Persistent/backups"
-    # echo "DEFAULT__SECUREBOX $DEFAULT__SECUREBOX"
+    export SECUREBOX="$HOME/Persistent/backups"
+    # echo "SECUREBOX $SECUREBOX"
     return 0
   fi
 
@@ -601,8 +622,8 @@ securebox_common_options_setdefaults_base()
   # than Termux internal storage this options if focused for cases were the user
   # don't have sufficient internal space.
   if [ -d "$HOME/storage/external-1/backups" ]; then
-    export DEFAULT__SECUREBOX="$HOME/storage/external-1/backups"
-    # echo "DEFAULT__SECUREBOX $DEFAULT__SECUREBOX"
+    export SECUREBOX="$HOME/storage/external-1/backups"
+    # echo "SECUREBOX $SECUREBOX"
     return 0
   fi
 
@@ -614,8 +635,8 @@ securebox_common_options_setdefaults_base()
   #   - Tails: this is likely to be RAM or temporary storage. While is safe
   #       the user should consider upload the result to some other place
   if [ -d "$HOME/backups" ]; then
-    export DEFAULT__SECUREBOX="$HOME/backups"
-    # echo "DEFAULT__SECUREBOX $DEFAULT__SECUREBOX"
+    export SECUREBOX="$HOME/backups"
+    # echo "SECUREBOX $SECUREBOX"
     return 0
   fi
 
@@ -624,8 +645,8 @@ securebox_common_options_setdefaults_base()
   # and not an removable media. It's an good idea you at least have
   # full disk encryption or mount project folders only when working with them.
   if [ -d "/backups" ]; then
-    export DEFAULT__SECUREBOX="/backups"
-    # echo "DEFAULT__SECUREBOX $DEFAULT__SECUREBOX"
+    export SECUREBOX="/backups"
+    # echo "SECUREBOX $SECUREBOX"
     return 0
   fi
   echo "securebox_common_options_setdefaults_base:"

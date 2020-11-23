@@ -40,11 +40,13 @@
 #                 2020-11-23 11:33 UTC v4.0 version bump. Code refactoring started.
 #                                      See GitHub GitHub & docs for details
 #===============================================================================
-export SECUREBOX_BACKUP_DOWNLOAD_VERSION="4.0.0"
-
 PROGRAM_START_DATETIME=$(date +%s)
 PROGRAM_NAME=$(basename "$0")
 set -e
+
+
+export SECUREBOX_BACKUP_DOWNLOAD_VERSION="4.0.0"
+export SECUREBOX_TASKNAME="$PROGRAM_NAME"
 
 ####################### securebox-backup-library.sh v2.0+ ######################
 # Place the securebox-backup-library.sh (non-executable) on the same path this
@@ -107,9 +109,9 @@ $PROGRAM_NAME help
 
       Minimal usage (without configuration files):
         SOURCE_HOST=user@example.org $PROGRAM_NAME
-          Download user@example.org:$SOURCE_PATH to $SECUREBOX_ACTIVE_MIRROR/{$SUBDIR_FILES,$SUBDIR_MYSQLDUMP}
+          Download user@example.org:$SOURCE_PATH to $SECUREBOX_MIRROR_NOW/{$SUBDIR_FILES,$SUBDIR_MYSQLDUMP}
         SOURCE_HOST=user@example.org SOURCE_PATH=/var/www/wordpress $PROGRAM_NAME
-          Download user@example.org:/var/www/wordpress to $SECUREBOX_ACTIVE_MIRROR/{$SUBDIR_FILES,$SUBDIR_MYSQLDUMP}
+          Download user@example.org:/var/www/wordpress to $SECUREBOX_MIRROR_NOW/{$SUBDIR_FILES,$SUBDIR_MYSQLDUMP}
 
       Typical ad-hoc usage (assumes you have configuration file):
         DEBUG=1 $PROGRAM_NAME ./path/to/custom/securebox-backup.conf 
@@ -189,14 +191,14 @@ securebox_backup_download_execute_create_local_folders()
     mkdir --mode "${SECUREBOX_MKDIR_MODE}" "${SECUREBOX_MIRROR}/${ORGANIZATION}/${PROJECT}"
   fi
 
-  if [ ! -d "${SECUREBOX_ACTIVE_MIRROR}/${SUBDIR_FILES}" ]; then
-    echo "INFO: ${SECUREBOX_ACTIVE_MIRROR}/${SUBDIR_FILES} does not exist. Creating now..."
-    mkdir --mode "${SECUREBOX_MKDIR_MODE}" "${SECUREBOX_ACTIVE_MIRROR}/${SUBDIR_FILES}"
+  if [ ! -d "${SECUREBOX_MIRROR_NOW_DRIVER_FILES}" ]; then
+    echo "INFO: ${SECUREBOX_MIRROR_NOW_DRIVER_FILES} does not exist. Creating now..."
+    mkdir --mode "${SECUREBOX_MKDIR_MODE}" "${SECUREBOX_MIRROR_NOW_DRIVER_FILES}"
   fi
 
-  if [ ! -d "${SECUREBOX_ACTIVE_MIRROR}/${SUBDIR_MYSQLDUMP}" ]; then
-    echo "INFO: ${SECUREBOX_ACTIVE_MIRROR}/${SUBDIR_MYSQLDUMP} does not exist. Creating now..."
-    mkdir --mode "${SECUREBOX_MKDIR_MODE}" "${SECUREBOX_ACTIVE_MIRROR}/${SUBDIR_MYSQLDUMP}"
+  if [ ! -d "${SECUREBOX_MIRROR_NOW_DRIVER_MYSQLDUMP}" ]; then
+    echo "INFO: ${SECUREBOX_MIRROR_NOW_DRIVER_MYSQLDUMP} does not exist. Creating now..."
+    mkdir --mode "${SECUREBOX_MKDIR_MODE}" "${SECUREBOX_MIRROR_NOW_DRIVER_MYSQLDUMP}"
   fi
 }
 
@@ -242,8 +244,9 @@ securebox_backup_download_execute_database_mydumper() {
 securebox_backup_download_execute_database_mysqldump()
 {
 
-  # export LOCALMIRROR_MYSQLDUMP_SQLFILE="$SECUREBOX_ACTIVE_MIRROR/$SUBDIR_MYSQLDUMP/$SOURCE_MARIADB_DBNAME.sql"
-  LOCALMIRROR_MYSQLDUMP_SQLFILE="$SECUREBOX_ACTIVE_MIRROR/$SUBDIR_MYSQLDUMP/$SOURCE_MARIADB_DBNAME.sql"
+  # export LOCALMIRROR_MYSQLDUMP_SQLFILE="$SECUREBOX_MIRROR_NOW/$SUBDIR_MYSQLDUMP/$SOURCE_MARIADB_DBNAME.sql"
+  # LOCALMIRROR_MYSQLDUMP_SQLFILE="$SECUREBOX_MIRROR_NOW_DRIVER_MYSQLDUMP/$SOURCE_MARIADB_DBNAME.sql"
+  export SECUREBOX_MIRROR_NOW_DRIVER_MYSQLDUMP_SQLFILE="$SECUREBOX_MIRROR_NOW_DRIVER_MYSQLDUMP/$SOURCE_MARIADB_DBNAME.sql"
 
   # This folder servers both as temporary file and as locking system
   # @see http://mywiki.wooledge.org/BashFAQ/050
@@ -275,7 +278,7 @@ securebox_backup_download_execute_database_mysqldump()
   # shellcheck disable=SC2029
   ssh "${SOURCE_MARIADB_SSHHOST}" "mysqldump --single-transaction --quick --host='$SOURCE_MARIADB_HOST' --user='$SOURCE_MARIADB_USER' --password='$SOURCE_MARIADB_PASS' '$SOURCE_MARIADB_DBNAME' > $MYSQLDUMP_TMPANDLOCKDIR/$SOURCE_MARIADB_DBNAME.sql"
 
-  rsync --verbose --compress "${SOURCE_MARIADB_SSHHOST}:$MYSQLDUMP_TMPANDLOCKDIR/$SOURCE_MARIADB_DBNAME.sql" "$LOCALMIRROR_MYSQLDUMP_SQLFILE"
+  rsync --verbose --compress "${SOURCE_MARIADB_SSHHOST}:$MYSQLDUMP_TMPANDLOCKDIR/$SOURCE_MARIADB_DBNAME.sql" "$SECUREBOX_MIRROR_NOW_DRIVER_MYSQLDUMP_SQLFILE"
   set +x
 
   if [ -n "$MYSQLDUMP_EXCLUSIVELOCK" ]; then
@@ -298,8 +301,8 @@ securebox_backup_download_execute_database_mysqldump()
 #######################################
 securebox_backup_download_execute_files_rsync()
 {
-  #export LOCALMIRROR_FILES_PATH="${SECUREBOX_ACTIVE_MIRROR}/${SUBDIR_FILES}"
-  LOCALMIRROR_FILES_PATH="${SECUREBOX_ACTIVE_MIRROR}/${SUBDIR_FILES}"
+  #export LOCALMIRROR_FILES_PATH="${SECUREBOX_MIRROR_NOW}/${SUBDIR_FILES}"
+  # LOCALMIRROR_FILES_PATH="${SECUREBOX_MIRROR_NOW}/${SUBDIR_FILES}"
 
   # NOTE on the 'shellcheck disable=SC2086':
   #  Both $DOWNLOAD_RSYNC_EXCLUDES and $RSYNC_EXTRAOPTIONS need to be
@@ -318,7 +321,7 @@ securebox_backup_download_execute_files_rsync()
     --compress \
     --delete \
     "${SOURCE_HOST}:${SOURCE_PATH}" \
-    "${LOCALMIRROR_FILES_PATH}" \
+    "${SECUREBOX_MIRROR_NOW_DRIVER_FILES}" \
     ${DOWNLOAD_RSYNC_DRYRUN_STRING} \
     ${DOWNLOAD_RSYNC_EXCLUDES} \
     ${RSYNC_EXTRAOPTIONS}
@@ -337,8 +340,8 @@ securebox_backup_download_execute_files_rsync()
 securebox_backup_download_results() {
   echo ""
   echo "$PROGRAM_NAME finished."
-  echo "Your mirrored data is at $SECUREBOX_ACTIVE_MIRROR"
-  du --human-readable --max-depth=1 $SECUREBOX_ACTIVE_MIRROR
+  echo "Your mirrored data is at $SECUREBOX_MIRROR_NOW"
+  du --human-readable --max-depth=1 "$SECUREBOX_MIRROR_NOW"
   echo ""
 }
 
