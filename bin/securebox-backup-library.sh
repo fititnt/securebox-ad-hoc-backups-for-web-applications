@@ -318,8 +318,8 @@ securebox_common_options_securebox_confs() {
 securebox_common_options_project ()
 {
   # POSIX does support local keywork.
-  _local_root="$SECUREBOX_MIRROR_NOW/$SUBDIR_FILES"
-
+  # _local_root="$SECUREBOX_MIRROR_NOW/$SUBDIR_FILES"
+  _local_root="$SECUREBOX_MIRROR_NOW_DRIVER_FILES"
 
   # Joomla?
   if [ -f "${_local_root}/configuration.php" ]; then
